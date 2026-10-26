@@ -1,9 +1,9 @@
-import os
-import pandas as pd
-import psycopg
-import streamlit as st
-import plotly.express as px
-from dotenv import load_dotenv
+#import os
+#import pandas as pd
+#import psycopg
+#import streamlit as st
+#import plotly.express as px
+#from dotenv import load_dotenv
 
 load_dotenv()
 
