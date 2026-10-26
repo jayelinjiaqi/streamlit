@@ -61,8 +61,8 @@ def load_ev_data():
 # LOAD AND VALIDATE DATA
 # --------------------------------------------------
 
-st.title("EV Payments Dashboard")
-st.caption("Transaction analytics | Neon PostgreSQL")
+st.title("GoParkin | EV Charging")
+# st.caption("Transaction analytics | Neon PostgreSQL")
 
 try:
     df = load_ev_data()
@@ -82,24 +82,13 @@ if df.empty:
     st.warning("The ev table contains no records.")
     st.stop()
 
-df["payment_amount_100"] = pd.to_numeric(
-    df["payment_amount_100"], errors="coerce")
-
+df["payment_amount_100"] = pd.to_numeric(df["payment_amount_100"], errors="coerce")
 df["payment_amount"] = df["payment_amount_100"]
 
 # Prefer exit_dt_p8; fall back to other common date columns.
-date_candidates = [
-    "exit_dt_p8",
-    "exit_date_time",
-    "paid_dt_p8",
-    "paid_datetime",
-    "entry_dt_p8",
-]
+date_candidates = ["exit_dt_p8","exit_date_time","paid_dt_p8","paid_datetime","entry_dt_p8",]
 
-date_col = next(
-    (col for col in date_candidates if col in df.columns),
-    None,
-)
+date_col = next((col for col in date_candidates if col in df.columns),None,)
 
 if date_col:
     df[date_col] = pd.to_datetime(df[date_col], errors="coerce")
@@ -109,25 +98,15 @@ else:
     df["report_date"] = pd.NaT
     df["month"] = None
 
-df["car_park_id"] = (
-    df["car_park_id"].astype("string").fillna("Unknown")
-)
-
+df["car_park_id"] = (df["car_park_id"].astype("string").fillna("Unknown"))
 
 # --------------------------------------------------
 # SIDEBAR FILTERS
 # --------------------------------------------------
-
 st.sidebar.header("Dashboard Filters")
-
 carparks = sorted(df["car_park_id"].unique().tolist())
-
-selected_carparks = st.sidebar.multiselect(
-    "Car Park ID",
-    options=carparks,
-    default=carparks,
-    help="Select one or more car parks.",
-)
+selected_carparks = st.sidebar.multiselect("Car Park ID",options=carparks,default=carparks,
+    help="Select one or more car parks.",)
 
 if date_col and df["report_date"].notna().any():
     valid_dates = df["report_date"].dropna()
@@ -135,12 +114,8 @@ if date_col and df["report_date"].notna().any():
     min_date = valid_dates.min().date()
     max_date = valid_dates.max().date()
 
-    date_range = st.sidebar.date_input(
-        "Transaction date range",
-        value=(min_date, max_date),
-        min_value=min_date,
-        max_value=max_date,
-    )
+    date_range = st.sidebar.date_input("Transaction date range",value=(min_date, max_date),
+        min_value=min_date,max_value=max_date,)
 else:
     date_range = None
 
@@ -152,17 +127,14 @@ if st.sidebar.button("Refresh data"):
 # --------------------------------------------------
 # APPLY FILTERS
 # --------------------------------------------------
-
 filtered = df[df["car_park_id"].isin(selected_carparks)].copy()
 
 if date_range and len(date_range) == 2:
     start_date, end_date = date_range
 
-    filtered = filtered[
-        filtered["report_date"].notna()
+    filtered = filtered[filtered["report_date"].notna()
         & (filtered["report_date"].dt.date >= start_date)
-        & (filtered["report_date"].dt.date <= end_date)
-    ]
+        & (filtered["report_date"].dt.date <= end_date)]
 
 
 # --------------------------------------------------
@@ -173,11 +145,9 @@ total_payment = filtered["payment_amount"].sum()
 transaction_count = len(filtered)
 carpark_count = filtered["car_park_id"].nunique()
 
-average_payment = (
-    filtered["payment_amount"].mean()
+average_payment = (filtered["payment_amount"].mean()
     if transaction_count
-    else 0
-)
+    else 0)
 
 k1, k2, k3, k4 = st.columns(4)
 
@@ -192,14 +162,11 @@ st.divider()
 # --------------------------------------------------
 # MONTHLY PAYMENT CHART
 # --------------------------------------------------
-
-st.subheader("Monthly Payment Trend")
+st.subheader("Total Payment By Month")
 
 if date_col is None:
-    st.warning(
-        "No supported date column was found. "
-        "Add your actual transaction date column to date_candidates."
-    )
+    st.warning("No supported date column was found. "
+        "Add your actual transaction date column to date_candidates.")
 elif filtered["report_date"].notna().sum() == 0:
     st.warning("No valid transaction dates are available.")
 elif filtered.empty:
@@ -210,16 +177,9 @@ else:
         .groupby("month", as_index=False)
         .agg(
             payment_amount=("payment_amount", "sum"),
-            transactions=("payment_amount", "size"),
-        )
-        .sort_values("month")
-    )
+            transactions=("payment_amount", "size"),).sort_values("month"))
 
-    fig = px.bar(
-        monthly,
-        x="month",
-        y="payment_amount",
-        text="payment_amount",
+    fig = px.bar(monthly,x="month",y="payment_amount",text="payment_amount",
         hover_data={"transactions": True},
         labels={
             "month": "Month",
@@ -227,8 +187,7 @@ else:
             "transactions": "Transactions",
         },
         template="plotly_white",
-        color_discrete_sequence=["#00A99D"],
-    )
+        color_discrete_sequence=["#00A99D"],)
 
     fig.update_traces(
         texttemplate="$%{text:,.2f}",
@@ -237,19 +196,12 @@ else:
         hovertemplate=(
             "Month: %{x}<br>"
             "Payments: $%{y:,.2f}<br>"
-            "<extra></extra>"
-        ),
-    )
+            "<extra></extra>"),)
 
-    fig.update_layout(
-        height=450,
-        showlegend=False,
-        margin=dict(t=30, b=30, l=20, r=20),
-        xaxis_title="Month",
-        yaxis_title="Total Payment",
+    fig.update_layout(height=450,showlegend=False,margin=dict(t=30, b=30, l=20, r=20),
+        xaxis_title="Month",yaxis_title="Total Payment",
         yaxis_tickprefix="$",
-        yaxis_tickformat=",.2f",
-    )
+        yaxis_tickformat=",.2f",)
 
     st.plotly_chart(fig, use_container_width=True)
 
@@ -257,42 +209,24 @@ else:
 # --------------------------------------------------
 # TRANSACTION DATA TABLE
 # --------------------------------------------------
-
 st.divider()
 st.subheader("Transaction Details")
-
-st.caption(
-    f"Showing {len(filtered):,} records after applying filters."
-)
+st.caption(f"Showing {len(filtered):,} records after applying filters.")
 
 # Display all original ev columns plus a readable payment amount.
-display_df = filtered.drop(
-    columns=["report_date", "month"],
-    errors="ignore",
-).copy()
+display_df = filtered.drop(columns=["report_date", "month"],errors="ignore",).copy()
 
-display_df = display_df.rename(
-    columns={"payment_amount": "payment_amount_currency"}
-)
+display_df = display_df.rename(columns={"payment_amount": "payment_amount_currency"})
 
-st.dataframe(
-    display_df,
-    use_container_width=True,
-    hide_index=True,
-    height=450,
-)
+st.dataframe(display_df,use_container_width=True,hide_index=True,height=450,)
 
 # CSV export
 csv_data = display_df.to_csv(index=False).encode("utf-8")
 
-st.download_button(
-    label="Download filtered transactions (CSV)",
+st.download_button(label="Download filtered transactions (CSV)",
     data=csv_data,
     file_name="ev_transactions.csv",
-    mime="text/csv",
-)
+    mime="text/csv",)
 
-st.caption(
-    f"Source: Neon PostgreSQL · Table: ev · "
-    f"Date column: {date_col or 'Not detected'}"
-)
+st.caption(f"Source: Neon PostgreSQL · Table: ev · "
+    f"Date column: {date_col or 'Not detected'}")
