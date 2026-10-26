@@ -5,7 +5,7 @@
 #import plotly.express as px
 #from dotenv import load_dotenv
 
-load_dotenv()
+#load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
