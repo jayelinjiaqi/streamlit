@@ -1,6 +1,5 @@
-os
 streamlit
 pandas
-psycopg
+psycopg[binary]
 plotly
 python-dotenv
