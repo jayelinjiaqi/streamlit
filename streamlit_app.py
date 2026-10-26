@@ -149,8 +149,9 @@ average_payment = (filtered["payment_amount"].mean()
     if transaction_count
     else 0)
 
-#k1, 
-k2, k3, k4 = st.columns(4)
+#k1, k2, k3, k4 = st.columns(4)
+
+k2, k3, k4 = st.columns(3)
 
 #k1.metric("Total Payments", f"${total_payment:,.2f}")
 k2.metric("Transactions", f"{transaction_count:,}")
