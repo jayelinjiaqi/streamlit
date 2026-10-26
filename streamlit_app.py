@@ -42,8 +42,8 @@ def load_ev_data():
 
     with psycopg.connect(DATABASE_URL) as conn:
         with conn.cursor() as cur:
-            cur.execute("""SELECT e.*, c.name as car_park_name, cpo.name as car_park_operator, op.name as car_park_operator
-            FROM ev e 
+            cur.execute("""SELECT e.*, c.name as car_park_name, cpo.name as car_park_owner, op.name as car_park_operator
+            FROM ev e
             LEFT JOIN car_park c on e.car_park_id = c.id
             LEFT JOIN car_park_owner cpo on c.car_park_owner_id = cpo.id
             LEFT JOIN car_park_operator op on c.car_park_operator_id = op.id""")
