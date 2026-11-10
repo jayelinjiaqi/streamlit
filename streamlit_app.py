@@ -20,7 +20,7 @@ st.html(
     """
     <style>
     img[data-testid="stLogo"] {
-        height: 4.5rem;
+        height: 9.5rem;
         max-height: none;   /* Override Streamlit built-in limits */
     }
     </style>
