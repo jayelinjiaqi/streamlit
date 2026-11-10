@@ -284,7 +284,7 @@ else:
 
 
 # --------------------------------------------------
-# MONTHLY ENERGY CHART
+# ENERGY BY MONTH 
 # --------------------------------------------------
 st.subheader("Energy Delivered By Month")
 
@@ -300,6 +300,8 @@ else:
         .groupby("month", as_index=False)
         .agg(energy_delivered=("ci_power", "sum"),
             transactions=("ci_power", "size"),).sort_values("month"))
+        #size counts all rows, including empty rows.
+        #count counts only non-null ci_power values.
 
     fig = px.bar(monthly,x="month",y="energy_delivered",text="energy_delivered",
         hover_data={"transactions": True},
@@ -312,8 +314,10 @@ else:
         textposition="outside",
         cliponaxis=False,
         hovertemplate=("Month: %{x}<br>"
-            "Payments: %{y:,.2f}<br>"
+            "Energy Delivered: %{y:,.2f}<br>"
             "<extra></extra>"),)
+
+
 
     fig.update_layout(height=450,showlegend=False,margin=dict(t=30, b=30, l=20, r=20),
         xaxis_title="Month",yaxis_title="Total Energy Delivered",yaxis_ticksuffix="kWh",yaxis_tickformat=",.2f",)
