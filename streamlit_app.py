@@ -4,15 +4,22 @@ import psycopg
 import streamlit as st
 import plotly.express as px
 from dotenv import load_dotenv
+import os
 
 load_dotenv()
-
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 # --------------------------------------------------
 # TOP LEFT BROWSER LOGO
 # --------------------------------------------------
-st.set_page_config(page_title="EV Payments Dashboard",page_icon="assets/logo.png",layout="wide",initial_sidebar_state="expanded",)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+LOGO_PATH = os.path.join(BASE_DIR, "assets", "logo.png")
+st.set_page_config(
+    page_title="EV Payments Dashboard",
+    page_icon=LOGO_PATH,
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
 
 
 # 1. Force custom size using custom CSS
