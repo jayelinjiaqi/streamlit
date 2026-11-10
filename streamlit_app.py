@@ -283,6 +283,79 @@ else:
     st.plotly_chart(fig, use_container_width=True)
 
 
+
+# --------------------------------------------------
+# MONTHLY PAYMENT BY CAR PARK NAME
+# --------------------------------------------------
+st.subheader("Total Payment By Month & Car Park")
+
+if date_col is None:
+    st.warning("No supported date column was found.")
+
+elif filtered["report_date"].notna().sum() == 0:
+    st.warning("No valid transaction dates are available.")
+
+elif filtered.empty:
+    st.info("No transactions match the selected filters.")
+
+else:
+    monthly_carpark = (
+        filtered.dropna(subset=["report_date"])
+        .groupby(["month", "car_park_name"], as_index=False)
+        .agg(
+            payment_amount=("payment_amount", "sum"),
+            transactions=("payment_amount", "size")
+        )
+        .sort_values(["month", "car_park_name"])
+    )
+
+    fig = px.bar(
+        monthly_carpark,
+        x="month",
+        y="payment_amount",
+        color="car_park_name",
+        barmode="group",
+        hover_data={"transactions": True},
+        labels={
+            "month": "Month",
+            "payment_amount": "Payment Amount",
+            "car_park_name": "Car Park Name",
+            "transactions": "Transactions"
+        },
+        template="plotly_white",
+        color_discrete_sequence=px.colors.qualitative.Safe
+    )
+
+    fig.update_traces(
+        hovertemplate=(
+            "Month: %{x}<br>"
+            "Car Park: %{fullData.name}<br>"
+            "Payments: $%{y:,.2f}<br>"
+            "<extra></extra>"
+        )
+    )
+
+    fig.update_layout(
+        height=500,
+        margin=dict(t=30, b=30, l=20, r=20),
+        xaxis_title="Month",
+        yaxis_title="Total Payment",
+        yaxis_tickprefix="$",
+        yaxis_tickformat=",.2f",
+        legend_title="Car Park Name",
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="left",
+            x=0
+        )
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
+
+
+
 # --------------------------------------------------
 # ENERGY BY MONTH 
 # --------------------------------------------------
