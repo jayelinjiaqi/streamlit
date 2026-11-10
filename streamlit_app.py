@@ -74,7 +74,7 @@ def load_ev_data():
             LEFT JOIN car_park c on e.car_park_id = c.id
             LEFT JOIN car_park_owner cpo on c.car_park_owner_id = cpo.id
             LEFT JOIN car_park_operator op on c.car_park_operator_id = op.id
-            LIMIT 10""")
+            LIMIT 500""")
             columns = [desc.name for desc in cur.description]
             rows = cur.fetchall()
     return pd.DataFrame(rows, columns=columns)
@@ -278,7 +278,7 @@ else:
             "<extra></extra>"),)
 
     fig.update_layout(height=450,showlegend=False,margin=dict(t=30, b=30, l=20, r=20),
-        xaxis_title="Month",yaxis_title="Total Payment",yaxis_tickprefix="$",yaxis_tickformat=",.2f",)
+        xaxis_title="Month",yaxis_title="Total Payment",yaxis_tickprefix="$",yaxis_tickformat=",.0f",)
 
     st.plotly_chart(fig, use_container_width=True)
 
@@ -302,19 +302,12 @@ else:
     monthly_carpark = (
         filtered.dropna(subset=["report_date"])
         .groupby(["month", "car_park_name"], as_index=False)
-        .agg(
-            payment_amount=("payment_amount", "sum"),
-            transactions=("payment_amount", "size")
-        )
+        .agg(payment_amount=("payment_amount", "sum"),transactions=("payment_amount", "size"))
         .sort_values(["month", "car_park_name"])
     )
 
-    fig = px.bar(
-        monthly_carpark,
-        x="month",
-        y="payment_amount",
-        color="car_park_name",
-        barmode="group",
+    fig = px.bar(monthly_carpark,x="month",y="payment_amount",
+        color="car_park_name",barmode="group",
         hover_data={"transactions": True},
         labels={
             "month": "Month",
@@ -326,31 +319,16 @@ else:
         color_discrete_sequence=px.colors.qualitative.Safe
     )
 
-    fig.update_traces(
-        hovertemplate=(
-            "Month: %{x}<br>"
+    fig.update_traces(hovertemplate=("Month: %{x}<br>"
             "Car Park: %{fullData.name}<br>"
             "Payments: $%{y:,.2f}<br>"
-            "<extra></extra>"
-        )
-    )
+            "<extra></extra>"))
 
-    fig.update_layout(
-        height=500,
-        margin=dict(t=30, b=30, l=20, r=20),
-        xaxis_title="Month",
-        yaxis_title="Total Payment",
-        yaxis_tickprefix="$",
-        yaxis_tickformat=",.2f",
+    fig.update_layout(height=500,margin=dict(t=30, b=30, l=20, r=20),
+        xaxis_title="Month",yaxis_title="Total Payment",
+        yaxis_tickprefix="$",yaxis_tickformat=",.2f",
         legend_title="Car Park Name",
-        legend=dict(
-            orientation="h",
-            yanchor="bottom",
-            y=1.02,
-            xanchor="left",
-            x=0
-        )
-    )
+        legend=dict(orientation="h",yanchor="bottom",y=1.02,xanchor="left",x=0))
 
     st.plotly_chart(fig, use_container_width=True)
 
