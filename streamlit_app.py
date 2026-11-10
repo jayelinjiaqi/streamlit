@@ -1,17 +1,12 @@
 import streamlit as st
+import os
 
-# Global page configuration (keep this in the router)
-st.set_page_config(
-    page_title="EV Payments Dashboard",
-    page_icon="assets/favicon.png",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# Define your pages using st.Page
-dashboard_page = st.Page("pages/1_EV_Billing_Summary.py", title="EV Billing Summary", default=True)
-monthly_details_page = st.Page("pages/2_Monthly_Payment_Details.py", title="Monthly Payment Details")
+st.set_page_config(page_title="EV Payments Dashboard",layout="wide",initial_sidebar_state="expanded")
 
-# Run navigation
-pg = st.navigation([dashboard_page, monthly_details_page])
+dashboard_page = st.Page(os.path.join(BASE_DIR, "pages", "1_EV_Billing_Summary.py"),title="EV Billing Summary",default=True)
+monthly_details_page = st.Page(os.path.join(BASE_DIR, "pages", "2_Monthly_Payment_Details.py"),title="Monthly Payment Details")
+
+pg = st.navigation([dashboard_page,monthly_details_page])
 pg.run()
