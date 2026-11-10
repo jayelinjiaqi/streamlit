@@ -310,7 +310,7 @@ else:
         color_discrete_sequence=["#00A99D"],)
 
     fig.update_traces(
-        texttemplate="%{text:,.0f} kWh"
+        texttemplate="%{text:,.0f} kWh",
         textposition="outside",
         cliponaxis=False,
         hovertemplate=("Month: %{x}<br>"
