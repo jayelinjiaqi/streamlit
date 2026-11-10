@@ -1,5 +1,5 @@
 [theme]
-primaryColor = "#D1D5DB"
-backgroundColor = "#FFFFFF"
-secondaryBackgroundColor = "#F3F4F6"
-textColor = "#123047"
+primaryColor = "#334155"          # Dark Slate accent
+backgroundColor = "#FFFFFF"       # Clean white background
+secondaryBackgroundColor = "#F1F5F9" # Cool light gray container background
+textColor = "#1E293B"             # Deep charcoal text
