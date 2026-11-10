@@ -110,8 +110,8 @@ df["payment_amount"] = df["payment_amount_100"]
 df["ci_power"] = pd.to_numeric(df["ci_power"], errors="coerce")
 
 # Prefer exit_dt_p8; fall back to other common date columns.
-date_candidates = ["exit_dt_p8","exit_date_time","paid_dt_p8","paid_datetime","entry_dt_p8",]
-
+#date_candidates = ["exit_dt_p8","exit_date_time","paid_dt_p8","paid_datetime","entry_dt_p8",]
+date_candidates = ["paid_dt_p8"]
 date_col = next((col for col in date_candidates if col in df.columns),None,)
 
 if date_col:
@@ -327,7 +327,7 @@ else:
 
 
 # --------------------------------------------------
-# MONTHLY PAYMENT BY CAR PARK OWNER & MONTH
+# MONTHLY PAYMENT BY CARPARK OWNER & MONTH
 # --------------------------------------------------
 st.subheader("Total Payment By Carpark Owner & Month")
 
@@ -508,7 +508,7 @@ else:
 # --------------------------------------------------
 # ENERGY BY CARPARK OWNER & MONTH
 # --------------------------------------------------
-st.subheader("Energy Delivered By Month & Carpark Owner")
+st.subheader("Energy Delivered By Carpark Owner & Month")
 
 if date_col is None:
     st.warning("No supported date column was found.")
@@ -531,8 +531,7 @@ else:
         color_discrete_sequence=px.colors.qualitative.Safe
     )
 
-    fig.update_traces(
-        hovertemplate=("Month: %{x}<br>"
+    fig.update_traces(hovertemplate=("Month: %{x}<br>"
             "Owner: %{fullData.name}<br>"
             "Energy Delivered: %{y:,.0f} kWh<br>"
             "Transactions: %{customdata[0]}<br>"
@@ -545,13 +544,10 @@ else:
     fig.update_layout(height=500,margin=dict(t=30, b=30, l=20, r=20),
         xaxis_title="Month",yaxis_title="Total Energy Delivered",
         yaxis_ticksuffix=" kWh",yaxis_tickformat=",.0f",legend_title="Carpark Owner",
-        legend=dict(orientation="h",yanchor="bottom",y=1.02,xanchor="left",
-            x=0
-        )
-    )
+        legend=dict(orientation="h",yanchor="bottom",y=1.02,xanchor="left",x=0
+        ))
 
     st.plotly_chart(fig, use_container_width=True)
-
 
 
 # --------------------------------------------------
