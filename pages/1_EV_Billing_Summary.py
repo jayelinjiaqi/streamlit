@@ -370,34 +370,30 @@ else:
         yaxis_tickformat=",.0f"
     )
 
-    # Enable bar selection
-    event = st.plotly_chart(
-    fig,
-    use_container_width=True,
-    key="monthly_payment_chart",
-    on_select="rerun",
-    selection_mode="points"
-    )
-
-    # Handle clicked month
-    if event and event.selection.points:
-
-        selected_month = str(
-            event.selection.points[0]["x"]
-        )
-
-        # Filter records for the selected month
+    event = st.plotly_chart(fig,use_container_width=True,key="monthly_payment_chart",on_select="rerun",selection_mode="points")
+    
+    # DEBUG: Check selected points
+    st.write("DEBUG EVENT:", event.selection.points)
+    
+    if len(event.selection.points) > 0:
+        selected_point = event.selection.points[0]
+    
+        # Get selected month
+        selected_month = str(selected_point["x"])
+        st.session_state["selected_payment_month"] = selected_month
+    
+        # Filter selected month
         selected_data = filtered[
             filtered["month"].astype(str) == selected_month
         ].copy()
-
+    
+        st.session_state["payment_detail_data"] = selected_data
+    
+        st.write("Selected month:", selected_month)
+        st.write("Selected records:", len(selected_data))
+    
         if not selected_data.empty:
-
-            st.session_state["selected_payment_month"] = selected_month
-
-            st.session_state["payment_detail_data"] = selected_data
-
-            # Navigate to registered page
+    
             st.switch_page(
                 "pages/2_Monthly_Payment_Details.py"
             )
