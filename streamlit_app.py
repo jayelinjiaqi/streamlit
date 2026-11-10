@@ -589,26 +589,21 @@ st.subheader("Energy Delivered By Car Park, Stake ID & Month")
 
 if "ci_stake" not in filtered.columns:
     st.warning("ci_stake column was not found.")
-
 elif date_col is None:
     st.warning("No supported date column was found.")
-
 elif filtered.empty or filtered["report_date"].notna().sum() == 0:
     st.info("No valid transactions match the selected filters.")
-
 else:
-    energy_data = filtered.dropna(subset=["report_date", "ci_stake"]).copy()
+    energy_data = filtered.dropna(subset=["report_date","ci_stake","ci_connector_id"]).copy()
 
     energy_data["car_park_name"] = (energy_data["car_park_name"].fillna("Unknown"))
 
     energy_data["ci_power"] = pd.to_numeric(energy_data["ci_power"], errors="coerce")
-
     energy_data = energy_data.dropna(subset=["ci_power"])
 
     # Create pivot table
-    monthly_stake_energy = energy_data.pivot_table(index=["car_park_name", "ci_stake"],
-        columns="month",values="ci_power",
-        aggfunc="sum",fill_value=0,observed=True)
+    monthly_stake_energy = energy_data.pivot_table(index=["car_park_name", "ci_stake", "ci_connector_id"],
+        columns="month",values="ci_power",aggfunc="sum",fill_value=0,observed=True)
 
     # Sort month columns chronologically
     month_columns = sorted(monthly_stake_energy.columns)
@@ -624,11 +619,10 @@ else:
     monthly_stake_energy = monthly_stake_energy.sort_values(by="Grand Total",ascending=False)
 
     # Calculate overall Grand Total
-    total_row = pd.DataFrame(
-        [monthly_stake_energy.sum(axis=0)],
+    total_row = pd.DataFrame([monthly_stake_energy.sum(axis=0)],
         index=pd.MultiIndex.from_tuples(
             [("Grand Total", "")],
-            names=["car_park_name", "ci_stake"]))
+            names=["car_park_name", "ci_stake", "ci_connector_id"]))
 
     # Append one Grand Total row
     monthly_stake_energy = pd.concat([monthly_stake_energy, total_row])
@@ -639,15 +633,15 @@ else:
     # Reset index to display clean columns
     monthly_stake_energy = monthly_stake_energy.reset_index()
 
+    # RENAME COLUMNS
+    monthly_stake_energy = monthly_stake_energy.rename(columns={
+        "car_park_name": "Carpark Name","ci_stake": "Stake ID","ci_connector_id": "Connector ID"})
+
     # Display table
-    st.dataframe(
-        monthly_stake_energy.style.format(
-            {col: "{:,.0f} kWh" for col in month_columns + ["Grand Total"]}
-        ),
+    st.dataframe(monthly_stake_energy.style.format({col: "{:,.0f} kWh" for col in month_columns + ["Grand Total"]}),
         use_container_width=True,
         hide_index=True
     )
-
 
 
 # --------------------------------------------------
