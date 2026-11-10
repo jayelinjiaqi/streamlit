@@ -285,22 +285,19 @@ else:
 
 
 # --------------------------------------------------
-# MONTHLY PAYMENT BY CAR PARK NAME
+# MONTHLY PAYMENT BY CAR PARK NAME & MONTH
 # --------------------------------------------------
 st.subheader("Total Payment By Carpark & Month")
 
 if date_col is None:
     st.warning("No supported date column was found.")
-
 elif filtered["report_date"].notna().sum() == 0:
     st.warning("No valid transaction dates are available.")
-
 elif filtered.empty:
     st.info("No transactions match the selected filters.")
 
 else:
-    monthly_carpark = (
-        filtered.dropna(subset=["report_date"])
+    monthly_carpark = (filtered.dropna(subset=["report_date"])
         .groupby(["month", "car_park_name"], as_index=False)
         .agg(payment_amount=("payment_amount", "sum"),transactions=("payment_amount", "size"))
         .sort_values(["month", "car_park_name"])
@@ -309,12 +306,7 @@ else:
     fig = px.bar(monthly_carpark,x="month",y="payment_amount",
         color="car_park_name",barmode="group",
         hover_data={"transactions": True},
-        labels={
-            "month": "Month",
-            "payment_amount": "Payment Amount",
-            "car_park_name": "Car Park Name",
-            "transactions": "Transactions"
-        },
+        labels={"month": "Month","payment_amount": "Payment Amount","car_park_name": "Car Park Name","transactions": "Transactions"},
         template="plotly_white",
         color_discrete_sequence=px.colors.qualitative.Safe
     )
@@ -337,14 +329,12 @@ else:
 # --------------------------------------------------
 # MONTHLY PAYMENT BY CAR PARK OWNER & MONTH
 # --------------------------------------------------
-st.subheader("Total Payment By Car Park Owner & Month")
+st.subheader("Total Payment By Carpark Owner & Month")
 
 if date_col is None:
     st.warning("No supported date column was found.")
-
 elif filtered["report_date"].notna().sum() == 0:
     st.warning("No valid transaction dates are available.")
-
 elif filtered.empty:
     st.info("No transactions match the selected filters.")
 
@@ -352,70 +342,42 @@ else:
     monthly_owner = (
         filtered.dropna(subset=["report_date"])
         .groupby(["month", "car_park_owner"], as_index=False)
-        .agg(
-            payment_amount=("payment_amount", "sum"),
-            transactions=("payment_amount", "size")
-        )
+        .agg(payment_amount=("payment_amount", "sum"),transactions=("payment_amount", "size"))
         .sort_values(["month", "car_park_owner"])
     )
 
-    fig = px.bar(
-        monthly_owner,
-        x="month",
-        y="payment_amount",
-        color="car_park_owner",
-        barmode="group",
+    fig = px.bar(monthly_owner,x="month",y="payment_amount",
+        color="car_park_owner",barmode="group",
         hover_data={"transactions": True},
-        labels={
-            "month": "Month",
-            "payment_amount": "Payment Amount",
-            "car_park_owner": "Car Park Owner",
-            "transactions": "Transactions"
-        },
+        labels={"month": "Month","payment_amount": "Payment Amount","car_park_owner": "Car Park Owner","transactions": "Transactions"},
         template="plotly_white",
         color_discrete_sequence=px.colors.qualitative.Safe
     )
 
     fig.update_traces(
-        hovertemplate=(
-            "Month: %{x}<br>"
+        hovertemplate=("Month: %{x}<br>"
             "Owner: %{fullData.name}<br>"
             "Payments: $%{y:,.2f}<br>"
             "<extra></extra>"
-        )
-    )
+        ))
 
-    fig.update_layout(
-        height=500,
-        margin=dict(t=30, b=30, l=20, r=20),
-        xaxis_title="Month",
-        yaxis_title="Total Payment",
-        yaxis_tickprefix="$",
-        yaxis_tickformat=",.2f",
-        legend_title="Car Park Owner",
-        legend=dict(
-            orientation="h",
-            yanchor="bottom",
-            y=1.02,
-            xanchor="left",
-            x=0
-        )
-    )
+    fig.update_layout(height=500,margin=dict(t=30, b=30, l=20, r=20),
+        xaxis_title="Month",yaxis_title="Total Payment",
+        yaxis_tickprefix="$",yaxis_tickformat=",.2f",
+        legend_title="Car Park Owner",legend=dict(orientation="h",yanchor="bottom",y=1.02,xanchor="left",x=0))
 
     st.plotly_chart(fig, use_container_width=True)
 
 
 # --------------------------------------------------
-# MONTHLY PAYMENT BY CAR PARK OPERATOR & MONTH
+# MONTHLY PAYMENT BY CARPARK OPERATOR & MONTH
 # --------------------------------------------------
-st.subheader("Total Payment By Car Park Operator & Month")
+st.subheader("Total Payment By Carpark Operator & Month")
 
 if date_col is None:
     st.warning("No supported date column was found.")
-
 elif filtered["report_date"].notna().sum() == 0:
     st.warning("No valid transaction dates are available.")
-
 elif filtered.empty:
     st.info("No transactions match the selected filters.")
 
@@ -423,10 +385,7 @@ else:
     monthly_operator = (
         filtered.dropna(subset=["report_date"])
         .groupby(["month", "car_park_operator"], as_index=False)
-        .agg(
-            payment_amount=("payment_amount", "sum"),
-            transactions=("payment_amount", "size")
-        )
+        .agg(payment_amount=("payment_amount", "sum"),transactions=("payment_amount", "size"))
         .sort_values(["month", "car_park_operator"])
     )
 
@@ -437,41 +396,23 @@ else:
         color="car_park_operator",
         barmode="group",
         hover_data={"transactions": True},
-        labels={
-            "month": "Month",
-            "payment_amount": "Payment Amount",
-            "car_park_operator": "Car Park Operator",
-            "transactions": "Transactions"
-        },
+        labels={"month": "Month","payment_amount": "Payment Amount","car_park_operator": "Car Park Operator",
+            "transactions": "Transactions"},
         template="plotly_white",
         color_discrete_sequence=px.colors.qualitative.Safe
     )
 
     fig.update_traces(
-        hovertemplate=(
-            "Month: %{x}<br>"
+        hovertemplate=("Month: %{x}<br>"
             "Operator: %{fullData.name}<br>"
             "Payments: $%{y:,.2f}<br>"
             "<extra></extra>"
-        )
-    )
+        ))
 
-    fig.update_layout(
-        height=500,
-        margin=dict(t=30, b=30, l=20, r=20),
-        xaxis_title="Month",
-        yaxis_title="Total Payment",
-        yaxis_tickprefix="$",
-        yaxis_tickformat=",.2f",
-        legend_title="Car Park Operator",
-        legend=dict(
-            orientation="h",
-            yanchor="bottom",
-            y=1.02,
-            xanchor="left",
-            x=0
-        )
-    )
+    fig.update_layout(height=500,margin=dict(t=30, b=30, l=20, r=20),
+        xaxis_title="Month",yaxis_title="Total Payment",yaxis_tickprefix="$",yaxis_tickformat=",.2f",
+        legend_title="Carpark Operator",
+        legend=dict(orientation="h",yanchor="bottom",y=1.02,xanchor="left",x=0))
 
     st.plotly_chart(fig, use_container_width=True)
 
@@ -520,22 +461,18 @@ else:
 
 
 # --------------------------------------------------
-# ENERGY BY CAR PARK & MONTH
+# ENERGY BY CARPARK & MONTH
 # --------------------------------------------------
-st.subheader("Energy Delivered By Month & Car Park")
+st.subheader("Energy Delivered By Carpark & Month")
 
 if date_col is None:
     st.warning("No supported date column was found.")
-
 elif filtered["report_date"].notna().sum() == 0:
     st.warning("No valid transaction dates are available.")
-
 elif filtered.empty:
     st.info("No transactions match the selected filters.")
-
 else:
-    monthly_carpark_energy = (
-        filtered.dropna(subset=["report_date"])
+    monthly_carpark_energy = (filtered.dropna(subset=["report_date"])
         .groupby(["month", "car_park_name"], as_index=False)
         .agg(energy_delivered=("ci_power", "sum"),transactions=("ci_power", "count"))
         .sort_values(["month", "car_park_name"])
@@ -544,18 +481,13 @@ else:
     fig = px.bar(monthly_carpark_energy,x="month",y="energy_delivered",
         color="car_park_name",barmode="group",
         hover_data={"transactions": True},
-        labels={"month": "Month",
-            "energy_delivered": "Energy Delivered",
-            "car_park_name": "Car Park Name",
-            "transactions": "Transactions"
-        },
+        labels={"month": "Month","energy_delivered": "Energy Delivered","car_park_name": "Car Park Name","transactions": "Transactions"},
         template="plotly_white",
         color_discrete_sequence=px.colors.qualitative.Safe
     )
 
     fig.update_traces(
-        hovertemplate=(
-            "Month: %{x}<br>"
+        hovertemplate=("Month: %{x}<br>"
             "Car Park: %{fullData.name}<br>"
             "Energy Delivered: %{y:,.0f} kWh<br>"
             "Transactions: %{customdata[0]}<br>"
@@ -564,17 +496,62 @@ else:
         customdata=monthly_carpark_energy[["transactions"]].values
     )
 
-    fig.update_layout(
-        height=500,
-        margin=dict(t=30, b=30, l=20, r=20),
-        xaxis_title="Month",
-        yaxis_title="Total Energy Delivered",
-        yaxis_ticksuffix=" kWh",
-        yaxis_tickformat=",.0f",
-        legend_title="Car Park Name",
+    fig.update_layout(height=500,margin=dict(t=30, b=30, l=20, r=20),
+        xaxis_title="Month",yaxis_title="Total Energy Delivered",
+        yaxis_ticksuffix=" kWh",yaxis_tickformat=",.0f",legend_title="Car Park Name",
         legend=dict(orientation="h",yanchor="bottom",y=1.02,xanchor="left",x=0))
 
     st.plotly_chart(fig, use_container_width=True)
+
+
+
+# --------------------------------------------------
+# ENERGY BY CARPARK OWNER & MONTH
+# --------------------------------------------------
+st.subheader("Energy Delivered By Month & Carpark Owner")
+
+if date_col is None:
+    st.warning("No supported date column was found.")
+elif filtered["report_date"].notna().sum() == 0:
+    st.warning("No valid transaction dates are available.")
+elif filtered.empty:
+    st.info("No transactions match the selected filters.")
+else:
+    monthly_owner_energy = (filtered.dropna(subset=["report_date"])
+        .groupby(["month", "car_park_owner"], as_index=False)
+        .agg(energy_delivered=("ci_power", "sum"),transactions=("ci_power", "count"))
+        .sort_values(["month", "car_park_owner"])
+    )
+
+    fig = px.bar(monthly_owner_energy,x="month",y="energy_delivered",
+        color="car_park_owner",barmode="group",
+        labels={"month": "Month","energy_delivered": "Energy Delivered",
+            "car_park_owner": "Car Park Owner","transactions": "Transactions"},
+        template="plotly_white",
+        color_discrete_sequence=px.colors.qualitative.Safe
+    )
+
+    fig.update_traces(
+        hovertemplate=("Month: %{x}<br>"
+            "Owner: %{fullData.name}<br>"
+            "Energy Delivered: %{y:,.0f} kWh<br>"
+            "Transactions: %{customdata[0]}<br>"
+            "<extra></extra>"
+        ),
+        customdata=monthly_owner_energy[["transactions"]].values,
+        texttemplate="%{y:,.0f} kWh"
+    )
+
+    fig.update_layout(height=500,margin=dict(t=30, b=30, l=20, r=20),
+        xaxis_title="Month",yaxis_title="Total Energy Delivered",
+        yaxis_ticksuffix=" kWh",yaxis_tickformat=",.0f",legend_title="Carpark Owner",
+        legend=dict(orientation="h",yanchor="bottom",y=1.02,xanchor="left",
+            x=0
+        )
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
+
 
 
 # --------------------------------------------------
