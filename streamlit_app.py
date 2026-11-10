@@ -87,7 +87,7 @@ def load_ev_data():
 # --------------------------------------------------
 # LOAD AND VALIDATE DATA
 # --------------------------------------------------
-st.title("GoParkin | EV Charging")
+st.title("EV | Billing Summary")
 # st.caption("Transaction analytics | Neon PostgreSQL")
 
 try:
