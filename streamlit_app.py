@@ -14,6 +14,20 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 # --------------------------------------------------
 st.set_page_config(page_title="EV Payments Dashboard",page_icon="assets/logo.png",layout="wide",initial_sidebar_state="expanded",)
 
+
+# 1. Force custom size using custom CSS
+st.html(
+    """
+    <style>
+    img[data-testid="stLogo"] {
+        height: 4.5rem;
+        max-height: none;   /* Override Streamlit built-in limits */
+    }
+    </style>
+    """
+)
+
+# 2. Render logo
 st.logo("assets/goparkin_logo.png",size="large")
 
 # --------------------------------------------------
