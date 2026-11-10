@@ -589,6 +589,37 @@ else:
 
     st.plotly_chart(fig, use_container_width=True)
 
+# --------------------------------------------------
+# ENERGY BY STAKE ID & MONTH - PIVOT TABLE
+# --------------------------------------------------
+st.subheader("Energy Delivered By Stake ID & Month")
+
+if "ci_stake" not in filtered.columns:
+    st.warning("ci_stake column was not found.")
+
+elif date_col is None:
+    st.warning("No supported date column was found.")
+
+elif filtered.empty or filtered["report_date"].notna().sum() == 0:
+    st.info("No valid transactions match the selected filters.")
+
+else:
+    monthly_stake_energy = (filtered.dropna(subset=["report_date"])
+        .pivot_table(index="ci_stake",columns="month",values="ci_power",aggfunc="sum",fill_value=0))
+
+    # Sort month columns chronologically
+    monthly_stake_energy = monthly_stake_energy.reindex(sorted(monthly_stake_energy.columns),axis=1)
+
+    # Add grand total column
+    monthly_stake_energy["Grand Total"] = (monthly_stake_energy.sum(axis=1))
+
+    # Add grand total row
+    monthly_stake_energy.loc["Grand Total"] = (monthly_stake_energy.sum(axis=0))
+
+    # Format as whole numbers
+    monthly_stake_energy = monthly_stake_energy.map(lambda x: f"{x:,.0f}")
+
+    st.dataframe(monthly_stake_energy,use_container_width=True,height=500)
 
 
 # --------------------------------------------------
