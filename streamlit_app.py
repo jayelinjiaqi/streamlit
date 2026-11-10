@@ -597,29 +597,31 @@ elif filtered.empty or filtered["report_date"].notna().sum() == 0:
     st.info("No valid transactions match the selected filters.")
 
 else:
-    # Remove records with missing dates or Stake IDs
     energy_data = filtered.dropna(
         subset=["report_date", "ci_stake"]
     ).copy()
 
-    # Replace missing Car Park Name
     energy_data["car_park_name"] = (
         energy_data["car_park_name"].fillna("Unknown")
     )
 
-    # Create pivot table
-    monthly_stake_energy = (
-        energy_data.pivot_table(
-            index=["car_park_name", "ci_stake"],
-            columns="month",
-            values="ci_power",
-            aggfunc="sum",
-            fill_value=0,
-            observed=True
-        )
+    energy_data["ci_power"] = pd.to_numeric(
+        energy_data["ci_power"], errors="coerce"
     )
 
-    # Sort months chronologically
+    energy_data = energy_data.dropna(subset=["ci_power"])
+
+    # Create pivot table
+    monthly_stake_energy = energy_data.pivot_table(
+        index=["car_park_name", "ci_stake"],
+        columns="month",
+        values="ci_power",
+        aggfunc="sum",
+        fill_value=0,
+        observed=True
+    )
+
+    # Sort month columns chronologically
     month_columns = sorted(monthly_stake_energy.columns)
     monthly_stake_energy = monthly_stake_energy[month_columns]
 
@@ -628,13 +630,18 @@ else:
         monthly_stake_energy.sum(axis=1)
     )
 
-    # Sort by Car Park Name and Grand Total descending
+    # Remove zero-energy rows
+    monthly_stake_energy = monthly_stake_energy[
+        monthly_stake_energy["Grand Total"] != 0
+    ]
+
+    # Sort by Grand Total descending
     monthly_stake_energy = monthly_stake_energy.sort_values(
-        by=["car_park_name", "Grand Total"],
-        ascending=[True, False]
+        by="Grand Total",
+        ascending=False
     )
 
-    # Calculate overall Grand Total separately
+    # Calculate overall Grand Total
     total_row = pd.DataFrame(
         [monthly_stake_energy.sum(axis=0)],
         index=pd.MultiIndex.from_tuples(
@@ -643,7 +650,7 @@ else:
         )
     )
 
-    # Append Grand Total row
+    # Append one Grand Total row
     monthly_stake_energy = pd.concat(
         [monthly_stake_energy, total_row]
     )
@@ -651,11 +658,17 @@ else:
     # Remove column heading
     monthly_stake_energy.columns.name = None
 
+    # Reset index to display clean columns
+    monthly_stake_energy = monthly_stake_energy.reset_index()
+
     # Display table
     st.dataframe(
-        monthly_stake_energy.style.format("{:,.0f} kWh"),
+        monthly_stake_energy.style.format(
+            {col: "{:,.0f} kWh" for col in month_columns + ["Grand Total"]}
+        ),
         use_container_width=True,
-        height=600
+        height=600,
+        hide_index=True
     )
 
 
