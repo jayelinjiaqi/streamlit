@@ -12,8 +12,14 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 # --------------------------------------------------
 # TOP LEFT BROWSER LOGO
 # --------------------------------------------------
-st.set_page_config(page_title="EV Payments Dashboard",page_icon="assets/logo.png",
-    layout="wide",initial_sidebar_state="expanded",)
+st.set_page_config(
+    page_title="EV Payments Dashboard",
+    page_icon="assets/logo.png",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
+
+st.logo("assets/logo.png",size="medium")
 
 # --------------------------------------------------
 # STYLING
