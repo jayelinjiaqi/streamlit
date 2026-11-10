@@ -241,10 +241,41 @@ k1, k2, k4 = st.columns(3)
 #k1.metric("Total Payments", f"${total_payment:,.2f}")
 #k2.metric("Transactions", f"{transaction_count:,}") #k3.metric("Car Parks", f"{carpark_count:,}")
 #k4.metric("Average Payment", f"${average_payment:,.2f}")
+k1, k2, k4 = st.columns(3)
 
 with k1:
-    st.metric("Total Payments", f"${total_payment:,.2f}")
-    if st.button("View Payment Details", key="payment_details"):
+    st.markdown(f"""
+        <style>
+        div[data-testid="stButton"]:has(button[kind="secondary"]) {{
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            z-index: 10;
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True)
+
+    st.markdown(f"""<div style="
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 18px;
+            position: relative;
+            min-height: 110px;
+            cursor: pointer;
+        ">
+            <div style="color:#555;font-size:14px;">Total Payments</div>
+            <div style="color:#123047;font-size:30px;font-weight:600;">
+                ${total_payment:,.2f}
+            </div>
+            <div style="color:#00A99D;font-size:12px;">
+                View payment details →
+            </div>
+        </div>
+        """,unsafe_allow_html=True)
+
+    if st.button("Open payment details", key="payment_card"):
         st.switch_page("pages/1_Transaction_Details.py")
 
 k2.metric("Transactions", f"{transaction_count:,}")
