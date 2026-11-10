@@ -238,9 +238,16 @@ average_payment = (filtered["payment_amount"].mean()
 #k1, k2, k3, k4 = st.columns(4)
 k1, k2, k4 = st.columns(3)
 
-k1.metric("Total Payments", f"${total_payment:,.2f}")
+#k1.metric("Total Payments", f"${total_payment:,.2f}")
+#k2.metric("Transactions", f"{transaction_count:,}") #k3.metric("Car Parks", f"{carpark_count:,}")
+#k4.metric("Average Payment", f"${average_payment:,.2f}")
+
+with k1:
+    st.metric("Total Payments", f"${total_payment:,.2f}")
+    if st.button("View Payment Details", key="payment_details"):
+        st.switch_page("pages/1_Transaction_Details.py")
+
 k2.metric("Transactions", f"{transaction_count:,}")
-#k3.metric("Car Parks", f"{carpark_count:,}")
 k4.metric("Average Payment", f"${average_payment:,.2f}")
 
 st.divider()
