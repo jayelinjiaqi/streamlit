@@ -329,7 +329,20 @@ else:
     fig.update_layout(height=450,showlegend=False,margin=dict(t=30, b=30, l=20, r=20),
         xaxis_title="Month",yaxis_title="Total Payment",yaxis_tickprefix="$",yaxis_tickformat=",.0f",)
 
-    st.plotly_chart(fig, use_container_width=True)
+    #st.plotly_chart(fig, use_container_width=True)
+    # Make monthly bars clickable
+    event = st.plotly_chart(fig,use_container_width=True,on_select="rerun",selection_mode="points")
+    
+    # Capture clicked month
+    if event and event.selection.points:
+        selected_month = event.selection.points[0]["x"]
+    
+        # Save selected month and filtered data
+        st.session_state["selected_payment_month"] = str(selected_month)
+        st.session_state["payment_detail_data"] = filtered.copy()
+    
+        # Navigate to details page
+        st.switch_page("pages/2_Monthly_Payment_Details.py")
 
 
 
