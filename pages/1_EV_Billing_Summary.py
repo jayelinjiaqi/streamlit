@@ -307,6 +307,8 @@ k4.metric("Average Payment", f"${average_payment:,.2f}")
 st.divider()
 
 
+
+
 # --------------------------------------------------
 # MONTHLY PAYMENT CHART
 # --------------------------------------------------
@@ -325,60 +327,79 @@ else:
     monthly = (
         filtered.dropna(subset=["report_date"])
         .groupby("month", as_index=False)
-        .agg(payment_amount=("payment_amount", "sum"),transactions=("payment_amount", "size"))
+        .agg(
+            payment_amount=("payment_amount", "sum"),
+            transactions=("payment_amount", "size")
+        )
         .sort_values("month")
     )
 
-    fig = px.bar(monthly,x="month",y="payment_amount",text="payment_amount",hover_data={"transactions": True},
-        labels={"month": "Month","payment_amount": "Payment Amount","transactions": "Transactions"},
+    fig = px.bar(
+        monthly,
+        x="month",
+        y="payment_amount",
+        text="payment_amount",
+        hover_data={"transactions": True},
+        labels={
+            "month": "Month",
+            "payment_amount": "Payment Amount",
+            "transactions": "Transactions"
+        },
         template="plotly_white",
         color_discrete_sequence=["#00A99D"]
     )
 
-    fig.update_traces(texttemplate="$%{text:,.2f}",
+    fig.update_traces(
+        texttemplate="$%{text:,.2f}",
         textposition="outside",
         cliponaxis=False,
-        hovertemplate=("Month: %{x}<br>"
+        hovertemplate=(
+            "Month: %{x}<br>"
             "Payments: $%{y:,.2f}<br>"
             "<extra></extra>"
-        ))
+        )
+    )
 
-    fig.update_layout(height=450,showlegend=False,margin=dict(t=30, b=30, l=20, r=20),
-        xaxis_title="Month",yaxis_title="Total Payment",yaxis_tickprefix="$",yaxis_tickformat=",.0f")
+    fig.update_layout(
+        height=450,
+        showlegend=False,
+        margin=dict(t=30, b=30, l=20, r=20),
+        xaxis_title="Month",
+        yaxis_title="Total Payment",
+        yaxis_tickprefix="$",
+        yaxis_tickformat=",.0f"
+    )
 
-    # --------------------------------------------------
-    # HANDLE BAR CLICK
-    # --------------------------------------------------
-    if event.selection.points:
-    
-        selected_point = event.selection.points[0]
-    
-        # Convert chart date to YYYY-MM
-        selected_month = pd.to_datetime(
-            selected_point["x"]
-        ).strftime("%Y-%m")
-    
-        # Save selected month
-        st.session_state["selected_payment_month"] = selected_month
-    
-        # Filter records for selected month
+    # Enable bar selection
+    event = st.plotly_chart(
+        fig,
+        use_container_width=True,
+        on_select="rerun",
+        selection_mode="points",
+        key="monthly_payment_chart"
+    )
+
+    # Handle clicked month
+    if event and event.selection.points:
+
+        selected_month = str(
+            event.selection.points[0]["x"]
+        )
+
+        # Filter records for the selected month
         selected_data = filtered[
             filtered["month"].astype(str) == selected_month
         ].copy()
-    
-        # Save filtered records
-        st.session_state["payment_detail_data"] = selected_data
-    
-        # Navigate to details page
+
         if not selected_data.empty:
-    
+
+            st.session_state["selected_payment_month"] = selected_month
+
+            st.session_state["payment_detail_data"] = selected_data
+
+            # Navigate to registered page
             st.switch_page(
                 "pages/2_Monthly_Payment_Details.py"
-            )
-    
-        else:
-            st.error(
-                f"No payment records found for {selected_month}"
             )
 
 # --------------------------------------------------
