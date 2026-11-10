@@ -107,7 +107,7 @@ if df.empty:
 df["payment_amount_100"] = pd.to_numeric(df["payment_amount_100"], errors="coerce")
 df["payment_amount"] = df["payment_amount_100"]
 
-df["ci_energy"] = pd.to_numeric(df["ci_energy"], errors="coerce")
+df["ci_power"] = pd.to_numeric(df["ci_power"], errors="coerce")
 
 # Prefer exit_dt_p8; fall back to other common date columns.
 date_candidates = ["exit_dt_p8","exit_date_time","paid_dt_p8","paid_datetime","entry_dt_p8",]
