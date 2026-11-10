@@ -68,7 +68,8 @@ def load_ev_data():
 
     with psycopg.connect(DATABASE_URL) as conn:
         with conn.cursor() as cur:
-            cur.execute("""SELECT e.*, c.name as car_park_name, cpo.name as car_park_owner, op.name as car_park_operator
+            cur.execute("""
+            SELECT e.*, c.name as car_park_name, cpo.name as car_park_owner, op.name as car_park_operator
             FROM ev e
             LEFT JOIN car_park c on e.car_park_id = c.id
             LEFT JOIN car_park_owner cpo on c.car_park_owner_id = cpo.id
@@ -105,6 +106,8 @@ if df.empty:
 
 df["payment_amount_100"] = pd.to_numeric(df["payment_amount_100"], errors="coerce")
 df["payment_amount"] = df["payment_amount_100"]
+
+df["ci_energy"] = pd.to_numeric(df["ci_energy"], errors="coerce")
 
 # Prefer exit_dt_p8; fall back to other common date columns.
 date_candidates = ["exit_dt_p8","exit_date_time","paid_dt_p8","paid_datetime","entry_dt_p8",]
