@@ -1,5 +1,5 @@
 [theme]
 primaryColor = "#00A99D"          # Button color
 backgroundColor = "#FFFFFF"       # Clean white background
-secondaryBackgroundColor = "#F1F5F9" # Left panel color cool light grey
+secondaryBackgroundColor = "#FFFFFF" # Left panel color white
 textColor = "#1E293B"             # Deep charcoal text
