@@ -310,17 +310,15 @@ else:
         color_discrete_sequence=["#00A99D"],)
 
     fig.update_traces(
-        texttemplate="%{text:,.2f}",
+        texttemplate="%{text:,.0f} kWh"
         textposition="outside",
         cliponaxis=False,
         hovertemplate=("Month: %{x}<br>"
-            "Energy Delivered: %{y:,.2f}<br>"
+            "Energy Delivered: %{y:,.2f} kWh<br>"
             "<extra></extra>"),)
 
-
-
     fig.update_layout(height=450,showlegend=False,margin=dict(t=30, b=30, l=20, r=20),
-        xaxis_title="Month",yaxis_title="Total Energy Delivered",yaxis_ticksuffix="kWh",yaxis_tickformat=",.2f",)
+        xaxis_title="Month",yaxis_title="Total Energy Delivered",yaxis_ticksuffix=" kWh",yaxis_tickformat=",.0f",)
 
     st.plotly_chart(fig, use_container_width=True)
 
