@@ -621,7 +621,7 @@ else:
     # Calculate overall Grand Total
     total_row = pd.DataFrame([monthly_stake_energy.sum(axis=0)],
         index=pd.MultiIndex.from_tuples(
-            [("Grand Total", "")],
+            [("Grand Total", "", "")],  #3 empty string to match 3 index levels
             names=["car_park_name", "ci_stake", "ci_connector_id"]))
 
     # Append one Grand Total row
