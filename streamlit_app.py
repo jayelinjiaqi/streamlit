@@ -299,7 +299,7 @@ else:
     monthly = (filtered.dropna(subset=["report_date"])
         .groupby("month", as_index=False)
         .agg(energy_delivered=("ci_power", "sum"),
-            transactions=("energy_delivered", "size"),).sort_values("month"))
+            transactions=("ci_power", "size"),).sort_values("month"))
 
     fig = px.bar(monthly,x="month",y="energy_delivered",text="energy_delivered",
         hover_data={"transactions": True},
