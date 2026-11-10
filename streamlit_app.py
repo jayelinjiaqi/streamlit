@@ -479,8 +479,7 @@ else:
         color_discrete_sequence=px.colors.qualitative.Safe
     )
 
-    fig.update_traces(
-        hovertemplate=("Month: %{x}<br>"
+    fig.update_traces(hovertemplate=("Month: %{x}<br>"
             "Car Park: %{fullData.name}<br>"
             "Energy Delivered: %{y:,.0f} kWh<br>"
             "Transactions: %{customdata[0]}<br>"
@@ -604,7 +603,7 @@ elif filtered.empty or filtered["report_date"].notna().sum() == 0:
 
 else:
     monthly_stake_energy = (filtered.dropna(subset=["report_date"])
-        .pivot_table(index="ci_stake",columns="month",values="ci_power",aggfunc="sum",fill_value=0))
+        .pivot_table(index=["car_park_name","ci_stake"],columns="month",values="ci_power",aggfunc="sum",fill_value=0))
 
     # Sort month columns chronologically
     monthly_stake_energy = monthly_stake_energy.reindex(sorted(monthly_stake_energy.columns),axis=1)
