@@ -12,12 +12,7 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 # --------------------------------------------------
 # TOP LEFT BROWSER LOGO
 # --------------------------------------------------
-st.set_page_config(
-    page_title="EV Payments Dashboard",
-    page_icon="assets/logo.png",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
+st.set_page_config(page_title="EV Payments Dashboard",page_icon="assets/logo.png",layout="wide",initial_sidebar_state="expanded",)
 
 st.logo("assets/goparkin_logo.png",size="large")
 
@@ -76,7 +71,6 @@ st.markdown("""
 def load_ev_data():
     if not DATABASE_URL:
         raise ValueError("DATABASE_URL is missing from .env")
-
     with psycopg.connect(DATABASE_URL) as conn:
         with conn.cursor() as cur:
             cur.execute("""
@@ -89,7 +83,6 @@ def load_ev_data():
             columns = [desc.name for desc in cur.description]
             rows = cur.fetchall()
     return pd.DataFrame(rows, columns=columns)
-
 
 # --------------------------------------------------
 # LOAD AND VALIDATE DATA
@@ -106,7 +99,6 @@ except Exception as exc:
 required = ["car_park_id", "payment_amount_100"]
 
 missing = [col for col in required if col not in df.columns]
-
 if missing:
     st.error(f"Missing required columns: {', '.join(missing)}")
     st.stop()
@@ -120,11 +112,9 @@ df["payment_amount"] = df["payment_amount_100"]
 
 df["ci_power"] = pd.to_numeric(df["ci_power"], errors="coerce")
 
-# Prefer exit_dt_p8; fall back to other common date columns.
-#date_candidates = ["exit_dt_p8","exit_date_time","paid_dt_p8","paid_datetime","entry_dt_p8",]
+# date_candidates = ["exit_dt_p8","exit_date_time","paid_dt_p8","paid_datetime","entry_dt_p8",] # Prefer exit_dt_p8; fall back to other common date columns.
 date_candidates = ["paid_dt_p8"]
 date_col = next((col for col in date_candidates if col in df.columns),None,)
-
 if date_col:
     df[date_col] = pd.to_datetime(df[date_col], errors="coerce")
     df["report_date"] = df[date_col]
@@ -167,8 +157,7 @@ if "ci_stake_id" in df.columns:
     df["ci_stake"] = df["ci_stake_id"].astype("string").fillna("Unknown")
     stakes = sorted(df["ci_stake"].unique().tolist())
 
-    selected_stakes = st.sidebar.multiselect("Stake ID",
-        options=stakes,default=stakes,help="Select one or more Stake IDs.")
+    selected_stakes = st.sidebar.multiselect("Stake ID",options=stakes,default=stakes,help="Select one or more Stake IDs.")
 else:
     selected_stakes = None
     st.sidebar.warning("Stake ID column ci_stake not found.")
@@ -188,23 +177,6 @@ if st.sidebar.button("Refresh data"):
     load_ev_data.clear()
     st.rerun()
 
-
-
-# --------------------------------------------------
-# APPLY FILTERS
-# --------------------------------------------------
-#filtered = df[
-#    df["car_park_name"].isin(selected_carparks)
-#    & df["car_park_owner"].isin(selected_owners)
-#    & df["car_park_operator"].isin(selected_operators)].copy()
-
-#if date_range and len(date_range) == 2:
-#    start_date, end_date = date_range
-
-#    filtered = filtered[
-#        filtered["report_date"].notna()
-#        & (filtered["report_date"].dt.date >= start_date)
-#        & (filtered["report_date"].dt.date <= end_date)]
 
 # --------------------------------------------------
 # APPLY FILTERS
@@ -604,28 +576,24 @@ else:
 
     # Display table
     st.dataframe(monthly_stake_energy.style.format({col: "{:,.0f} kWh" for col in month_columns + ["Grand Total"]}),
-        use_container_width=True,
-        hide_index=True
-    )
+        use_container_width=True,hide_index=True)
 
 
 # --------------------------------------------------
 # TRANSACTION DATA TABLE
 # --------------------------------------------------
-st.divider()
-st.subheader("Transaction Details")
-st.caption(f"Showing {len(filtered):,} records after applying filters.")
+#st.divider()
+#st.subheader("Transaction Details")
+#st.caption(f"Showing {len(filtered):,} records after applying filters.")
 
 # Display all original ev columns plus a readable payment amount.
-display_df = filtered.drop(columns=["report_date", "month"],errors="ignore",).copy()
-
-display_df = display_df.rename(columns={"payment_amount": "payment_amount_currency"})
-
-st.dataframe(display_df,use_container_width=True,hide_index=True,height=450,)
+#display_df = filtered.drop(columns=["report_date", "month"],errors="ignore",).copy()
+#display_df = display_df.rename(columns={"payment_amount": "payment_amount_currency"})
+#st.dataframe(display_df,use_container_width=True,hide_index=True,height=450,)
 
 # CSV export
-csv_data = display_df.to_csv(index=False).encode("utf-8")
-st.download_button(label="Download filtered transactions (CSV)",data=csv_data,file_name="ev_transactions.csv",mime="text/csv",)
+#csv_data = display_df.to_csv(index=False).encode("utf-8")
+#st.download_button(label="Download filtered transactions (CSV)",data=csv_data,file_name="ev_transactions.csv",mime="text/csv",)
 
-st.caption(f"Source: ev · "
-    f"Date column: {date_col or 'Not detected'}")
+#st.caption(f"Source: ev · "
+#    f"Date column: {date_col or 'Not detected'}")
