@@ -4,7 +4,8 @@ import psycopg
 import streamlit as st
 import plotly.express as px
 from dotenv import load_dotenv
-#import os
+import os
+from PIL import Image
 
 load_dotenv()
 DATABASE_URL = os.getenv("DATABASE_URL")
@@ -12,13 +13,16 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 # --------------------------------------------------
 # TOP LEFT BROWSER LOGO
 # --------------------------------------------------
-#BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-#LOGO_PATH = os.path.join(BASE_DIR, "assets", "logo.png")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+LOGO_PATH = os.path.join(BASE_DIR, "assets", "logo.png")
+
+logo = Image.open(LOGO_PATH)
+
 st.set_page_config(
     page_title="EV Payments Dashboard",
-    page_icon="assets/logo.png",
+    page_icon=logo,
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="expanded"
 )
 
 
