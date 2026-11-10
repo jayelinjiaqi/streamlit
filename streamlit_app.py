@@ -70,7 +70,7 @@ def load_ev_data():
         with conn.cursor() as cur:
             cur.execute("""
             SELECT e.*, c.name as car_park_name, cpo.name as car_park_owner, op.name as car_park_operator
-            FROM ev e
+            FROM ev_paid_datetime e
             LEFT JOIN car_park c on e.car_park_id = c.id
             LEFT JOIN car_park_owner cpo on c.car_park_owner_id = cpo.id
             LEFT JOIN car_park_operator op on c.car_park_operator_id = op.id
@@ -341,5 +341,5 @@ st.dataframe(display_df,use_container_width=True,hide_index=True,height=450,)
 csv_data = display_df.to_csv(index=False).encode("utf-8")
 st.download_button(label="Download filtered transactions (CSV)",data=csv_data,file_name="ev_transactions.csv",mime="text/csv",)
 
-st.caption(f"Source: Neon PostgreSQL · Table: ev · "
+st.caption(f"Source: ev · "
     f"Date column: {date_col or 'Not detected'}")
