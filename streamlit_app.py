@@ -382,12 +382,8 @@ else:
         .sort_values(["month", "car_park_operator"])
     )
 
-    fig = px.bar(
-        monthly_operator,
-        x="month",
-        y="payment_amount",
-        color="car_park_operator",
-        barmode="group",
+    fig = px.bar(monthly_operator,x="month",y="payment_amount",
+        color="car_park_operator",barmode="group",
         hover_data={"transactions": True},
         labels={"month": "Month","payment_amount": "Payment Amount","car_park_operator": "Car Park Operator",
             "transactions": "Transactions"},
@@ -395,8 +391,7 @@ else:
         color_discrete_sequence=px.colors.qualitative.Safe
     )
 
-    fig.update_traces(
-        hovertemplate=("Month: %{x}<br>"
+    fig.update_traces(hovertemplate=("Month: %{x}<br>"
             "Operator: %{fullData.name}<br>"
             "Payments: $%{y:,.2f}<br>"
             "<extra></extra>"
@@ -408,8 +403,6 @@ else:
         legend=dict(orientation="h",yanchor="bottom",y=1.02,xanchor="left",x=0))
 
     st.plotly_chart(fig, use_container_width=True)
-
-
 
 
 # --------------------------------------------------
@@ -438,8 +431,7 @@ else:
         template="plotly_white",
         color_discrete_sequence=["#00A99D"],)
 
-    fig.update_traces(
-        texttemplate="%{text:,.0f} kWh",
+    fig.update_traces(texttemplate="%{text:,.0f} kWh",
         textposition="outside",
         cliponaxis=False,
         hovertemplate=("Month: %{x}<br>"
@@ -591,7 +583,7 @@ else:
 
 
 # --------------------------------------------------
-# ENERGY BY CAR PARK & STAKE ID & MONTH - PIVOT TABLE
+# PIVOT TABLE - ENERGY BY CARPARK NAME & STAKE ID & MONTH
 # --------------------------------------------------
 st.subheader("Energy Delivered By Car Park, Stake ID & Month")
 
@@ -605,32 +597,66 @@ elif filtered.empty or filtered["report_date"].notna().sum() == 0:
     st.info("No valid transactions match the selected filters.")
 
 else:
-    monthly_stake_energy = (filtered.dropna(subset=["report_date"])
-        .pivot_table(index=["car_park_name", "ci_stake"],columns="month",values="ci_power",aggfunc="sum",fill_value=0))
+    # Remove records with missing dates or Stake IDs
+    energy_data = filtered.dropna(
+        subset=["report_date", "ci_stake"]
+    ).copy()
 
-    # Remove rows with missing Stake ID
-    monthly_stake_energy = monthly_stake_energy[monthly_stake_energy.index.get_level_values("ci_stake").notna()]
+    # Replace missing Car Park Name
+    energy_data["car_park_name"] = (
+        energy_data["car_park_name"].fillna("Unknown")
+    )
 
-    # Sort month columns chronologically
-    monthly_stake_energy = monthly_stake_energy.reindex(sorted(monthly_stake_energy.columns),axis=1)
+    # Create pivot table
+    monthly_stake_energy = (
+        energy_data.pivot_table(
+            index=["car_park_name", "ci_stake"],
+            columns="month",
+            values="ci_power",
+            aggfunc="sum",
+            fill_value=0,
+            observed=True
+        )
+    )
+
+    # Sort months chronologically
+    month_columns = sorted(monthly_stake_energy.columns)
+    monthly_stake_energy = monthly_stake_energy[month_columns]
 
     # Add Grand Total column
-    monthly_stake_energy["Grand Total"] = (monthly_stake_energy.sum(axis=1))
+    monthly_stake_energy["Grand Total"] = (
+        monthly_stake_energy.sum(axis=1)
+    )
 
-    # Sort by Car Park Name, then Grand Total descending
-    monthly_stake_energy = monthly_stake_energy.sort_values(by=["car_park_name", "Grand Total"],ascending=[True, False])
+    # Sort by Car Park Name and Grand Total descending
+    monthly_stake_energy = monthly_stake_energy.sort_values(
+        by=["car_park_name", "Grand Total"],
+        ascending=[True, False]
+    )
 
-    # Calculate Grand Total row
-    total_row = monthly_stake_energy.sum(axis=0)
+    # Calculate overall Grand Total separately
+    total_row = pd.DataFrame(
+        [monthly_stake_energy.sum(axis=0)],
+        index=pd.MultiIndex.from_tuples(
+            [("Grand Total", "")],
+            names=["car_park_name", "ci_stake"]
+        )
+    )
 
-    # Add Grand Total row using matching MultiIndex structure
-    monthly_stake_energy.loc[("Grand Total", "")] = total_row
+    # Append Grand Total row
+    monthly_stake_energy = pd.concat(
+        [monthly_stake_energy, total_row]
+    )
 
     # Remove column heading
     monthly_stake_energy.columns.name = None
 
-    # Display with kWh suffix
-    st.dataframe(monthly_stake_energy.style.format("{:,.0f} kWh"),use_container_width=True,height=600)
+    # Display table
+    st.dataframe(
+        monthly_stake_energy.style.format("{:,.0f} kWh"),
+        use_container_width=True,
+        height=600
+    )
 
 
 
