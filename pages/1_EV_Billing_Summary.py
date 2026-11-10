@@ -31,12 +31,11 @@ if os.path.exists(LOGO_PATH):
 
 logo = Image.open(LOGO_PATH)
 
-st.set_page_config(
-    page_title="EV Payments Dashboard",
-    page_icon=logo,
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+#st.set_page_config(
+#    page_title="EV Payments Dashboard",
+#    page_icon=logo,
+#    layout="wide",
+#    initial_sidebar_state="expanded")
 
 
 # 1. Force custom size using custom CSS
