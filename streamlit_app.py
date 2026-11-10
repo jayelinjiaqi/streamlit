@@ -712,6 +712,8 @@ else:
 
     energy_data["car_park_name"] = (energy_data["car_park_name"].fillna("Unknown"))
 
+    energy_data["ci_connector_id"] = (pd.to_numeric(energy_data["ci_connector_id"], errors="coerce").fillna(0).astype(int))
+
     energy_data["ci_power"] = pd.to_numeric(energy_data["ci_power"], errors="coerce")
     energy_data = energy_data.dropna(subset=["ci_power"])
 
