@@ -244,42 +244,52 @@ k1, k2, k4 = st.columns(3)
 k1, k2, k4 = st.columns(3)
 
 with k1:
-    st.markdown(f"""
-        <style>
-        div[data-testid="stButton"]:has(button[kind="secondary"]) {{
-            position: absolute;
-            inset: 0;
-            opacity: 0;
-            z-index: 10;
-        }}
-        </style>
-        """,
-        unsafe_allow_html=True)
-
-    st.markdown(f"""<div style="
-            background: white;
+    st.html(f"""
+    <div
+        onclick="window.parent.location.href =
+        window.parent.location.origin +
+        window.parent.location.pathname +
+        '?page=payment_details'"
+        style="
+            background: #ffffff;
             border: 1px solid #e5e7eb;
             border-radius: 12px;
             padding: 18px;
-            position: relative;
             min-height: 110px;
             cursor: pointer;
-        ">
-            <div style="color:#555;font-size:14px;">Total Payments</div>
-            <div style="color:#123047;font-size:30px;font-weight:600;">
-                ${total_payment:,.2f}
-            </div>
-            <div style="color:#00A99D;font-size:12px;">
-                View payment details →
-            </div>
+            transition: all 0.2s ease;
+        "
+        onmouseover="this.style.borderColor='#00A99D';
+                     this.style.boxShadow='0 4px 12px rgba(0,169,157,0.15)'"
+        onmouseout="this.style.borderColor='#e5e7eb';
+                    this.style.boxShadow='none'"
+    >
+        <div style="color:#555;font-size:14px;">
+            Total Payments
         </div>
-        """,unsafe_allow_html=True)
 
-    if st.button("Open payment details", key="payment_card"):
-        st.switch_page("pages/1_Transaction_Details.py")
+        <div style="
+            color:#123047;
+            font-size:30px;
+            font-weight:600;
+            margin-top:8px;
+        ">
+            ${total_payment:,.2f}
+        </div>
+
+        <div style="
+            color:#00A99D;
+            font-size:12px;
+            margin-top:8px;
+        ">
+            View payment details →
+        </div>
+    </div>
+    """)
 
 k2.metric("Transactions", f"{transaction_count:,}")
 k4.metric("Average Payment", f"${average_payment:,.2f}")
+
 
 st.divider()
 
