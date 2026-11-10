@@ -372,11 +372,11 @@ else:
 
     # Enable bar selection
     event = st.plotly_chart(
-        fig,
-        use_container_width=True,
-        on_select="rerun",
-        selection_mode="points",
-        key="monthly_payment_chart"
+    fig,
+    use_container_width=True,
+    key="monthly_payment_chart",
+    on_select="rerun",
+    selection_mode="points"
     )
 
     # Handle clicked month
