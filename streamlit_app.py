@@ -15,68 +15,44 @@ st.set_page_config(page_title="EV Payments Dashboard",page_icon="",layout="wide"
 # --------------------------------------------------
 st.markdown("""
 <style>
-    /* Main Background and Container Spacing */
     .block-container {
-        padding-top: 2rem;
-        padding-bottom: 3rem;
-        padding-left: 3rem;
-        padding-right: 3rem;
+        padding-top: 1.5rem;
+        padding-bottom: 2rem;
     }
-    
+    [data-testid="stMetric"] {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        padding: 18px;
+        border-radius: 12px;
+    }
     h1, h2, h3 {
-        color: #0F172A;
-        font-family: sans-serif;
-        font-weight: 700;
+        color: #123047;
     }
 
-    /* Light grey selected filter tags */
+        /* Match filter selection color to chart */
+    :root {
+        --primary-color: #00A99D;
+    }
+
+    /* Selected items in multiselect */
     [data-baseweb="tag"] {
-        background-color: #E5E7EB !important;
-        color: #374151 !important;
+        background-color: #00A99D !important;
     }
-    [data-baseweb="tag"] span, [data-baseweb="tag"] svg {
-        color: #374151 !important;
-        fill: #374151 !important;
+
+    /* Selected filter controls */
+    [data-baseweb="select"] div:focus-within {
+        border-color: #00A99D !important;
+        box-shadow: 0 0 0 1px #00A99D !important;
     }
-      
-    /* Filter dropdown background */
-    [data-baseweb="select"] > div {
-        background-color: #F3F4F6 !important;
-        border-color: #D1D5DB !important;
+
+    /* Date picker selected date */
+    [data-testid="stDateInput"] button {
+        color: #00A99D !important;
     }
-      
-    /* Filter dropdown focus & active states */
-    [data-baseweb="select"] div:focus-within, 
-    div[data-baseweb="select"] > div:hover {
-        border-color: #9CA3AF !important;
-        box-shadow: 0 0 0 1px #9CA3AF !important;
-    }
-      
-    /* Date picker inputs */
-    [data-testid="stDateInput"] input {
-        background-color: #F3F4F6 !important;
-        border-color: #D1D5DB !important;
-        color: #374151 !important;
-    }
-    [data-testid="stDateInput"] svg {
-        fill: #374151 !important;
-    }
-      
+
     /* Sidebar filter labels */
     [data-testid="stSidebar"] label {
-        color: #123047 !important;
-        font-weight: 600;
-    }
-      
-    /* Refresh button */
-    [data-testid="stSidebar"] button {
-        background-color: #E5E7EB !important;
-        color: #374151 !important;
-        border-color: #D1D5DB !important;
-    }
-    [data-testid="stSidebar"] button:hover {
-        background-color: #D1D5DB !important;
-        color: #1F2937 !important;
+        color: #123047;
     }
 </style>
 """, unsafe_allow_html=True)
