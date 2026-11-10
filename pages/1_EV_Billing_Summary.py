@@ -13,11 +13,11 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 # --------------------------------------------------
 # PAGE NAVIGATION
 # --------------------------------------------------
-dashboard_page = st.Page("pages/1_EV_Billing_Summary.py", title="EV Billing Summary", default=True)
-monthly_details_page = st.Page("pages/2_Monthly_Payment_Details.py", title="Monthly Payment Details") # check if it's pages/2_...
+#dashboard_page = st.Page("pages/1_EV_Billing_Summary.py", title="EV Billing Summary", default=True)
+#monthly_details_page = st.Page("pages/2_Monthly_Payment_Details.py", title="Monthly Payment Details") # check if it's pages/2_...
 
-pg = st.navigation([dashboard_page, monthly_details_page])
-pg.run()
+#pg = st.navigation([dashboard_page, monthly_details_page])
+#pg.run()
 
 # --------------------------------------------------
 # TOP LEFT BROWSER LOGO
@@ -676,13 +676,6 @@ else:
     # Display table
     st.dataframe(monthly_stake_energy.style.format({col: "{:,.0f} kWh" for col in month_columns + ["Grand Total"]}),
         use_container_width=True,hide_index=True)
-
-# --------------------------------------------------
-# NAVIGATION
-# --------------------------------------------------
-if st.button("← Back to Dashboard"):
-    #st.switch_page("streamlit_app.py")
-    st.switch_page("pages/1_EV_Billing_Summary.py")
 
 # --------------------------------------------------
 # TRANSACTION DATA TABLE
