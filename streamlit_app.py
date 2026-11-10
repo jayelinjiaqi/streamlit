@@ -13,7 +13,7 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 # --------------------------------------------------
 # PAGE NAVIGATION
 # --------------------------------------------------
-dashboard_page = st.Page("EV_Billing_Summary.py",title="EV Billing Summary",default=True)
+dashboard_page = st.Page("streamlit_app.py",title="EV Billing Summary",default=True)
 monthly_details_page = st.Page("pages/2_Monthly_Payment_Details.py",title="Monthly Payment Details")
 pg = st.navigation([dashboard_page,monthly_details_page])
 pg.run()
