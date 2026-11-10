@@ -28,31 +28,42 @@ st.markdown("""
     h1, h2, h3 {
         color: #123047;
     }
-
-        /* Match filter selection color to chart */
-    :root {
-        --primary-color: #00A99D;
-    }
-
-    /* Selected items in multiselect */
+    
+    /* Light grey selected filter tags */
     [data-baseweb="tag"] {
-        background-color: #00A99D !important;
+        background-color: #E5E7EB !important;
+        color: #374151 !important;
     }
-
-    /* Selected filter controls */
+    
+    /* Filter dropdown background */
+    [data-baseweb="select"] > div {
+        background-color: #F3F4F6 !important;
+        border-color: #D1D5DB !important;
+    }
+    
+    /* Filter dropdown focus */
     [data-baseweb="select"] div:focus-within {
-        border-color: #00A99D !important;
-        box-shadow: 0 0 0 1px #00A99D !important;
+        border-color: #9CA3AF !important;
+        box-shadow: 0 0 0 1px #9CA3AF !important;
     }
-
-    /* Date picker selected date */
-    [data-testid="stDateInput"] button {
-        color: #00A99D !important;
+    
+    /* Date picker */
+    [data-testid="stDateInput"] input {
+        background-color: #F3F4F6 !important;
+        border-color: #D1D5DB !important;
+        color: #374151 !important;
     }
-
+    
     /* Sidebar filter labels */
     [data-testid="stSidebar"] label {
-        color: #123047;
+        color: #123047 !important;
+    }
+    
+    /* Refresh button */
+    [data-testid="stSidebar"] button {
+        background-color: #E5E7EB;
+        color: #374151;
+        border-color: #D1D5DB;
     }
 </style>
 """, unsafe_allow_html=True)
