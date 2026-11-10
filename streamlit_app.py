@@ -8,10 +8,15 @@ from dotenv import load_dotenv
 load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
-st.set_page_config(page_title="EV Payments Dashboard",page_icon="",layout="wide",initial_sidebar_state="expanded",)
 
 # --------------------------------------------------
-# DASHBOARD STYLING
+# TOP LEFT BROWSER LOGO
+# --------------------------------------------------
+st.set_page_config(page_title="EV Payments Dashboard",page_icon="assets/goparkin_logo.png",
+    layout="wide",initial_sidebar_state="expanded",)
+
+# --------------------------------------------------
+# STYLING
 # --------------------------------------------------
 st.markdown("""
 <style>
