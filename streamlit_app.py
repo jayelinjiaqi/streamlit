@@ -152,7 +152,7 @@ selected_operators = st.sidebar.multiselect(
     options=operators,default=operators,help="Select one or more car park operators.",)
 
 # 4. Stake ID Filter
-if "ci_stake" in df.columns:
+if "ci_stake_id" in df.columns:
     df["ci_stake"] = df["ci_stake_id"].astype("string").fillna("Unknown")
     stakes = sorted(df["ci_stake"].unique().tolist())
 
