@@ -307,57 +307,100 @@ k4.metric("Average Payment", f"${average_payment:,.2f}")
 st.divider()
 
 
+
+
 # --------------------------------------------------
 # MONTHLY PAYMENT CHART
 # --------------------------------------------------
 st.subheader("Total Payment By Month")
 
 if date_col is None:
-    st.warning("No supported date column was found. "
-        "Add your actual transaction date column to date_candidates.")
+    st.warning("No supported date column was found.")
+
 elif filtered["report_date"].notna().sum() == 0:
     st.warning("No valid transaction dates are available.")
+
 elif filtered.empty:
     st.info("No transactions match the selected filters.")
-else:
-    monthly = (filtered.dropna(subset=["report_date"])
-        .groupby("month", as_index=False)
-        .agg(payment_amount=("payment_amount", "sum"),
-            transactions=("payment_amount", "size"),).sort_values("month"))
 
-    fig = px.bar(monthly,x="month",y="payment_amount",text="payment_amount",
+else:
+    monthly = (
+        filtered.dropna(subset=["report_date"])
+        .groupby("month", as_index=False)
+        .agg(
+            payment_amount=("payment_amount", "sum"),
+            transactions=("payment_amount", "size")
+        )
+        .sort_values("month")
+    )
+
+    fig = px.bar(
+        monthly,
+        x="month",
+        y="payment_amount",
+        text="payment_amount",
         hover_data={"transactions": True},
-        labels={"month": "Month","payment_amount": "Payment Amount","transactions": "Transactions",},
+        labels={
+            "month": "Month",
+            "payment_amount": "Payment Amount",
+            "transactions": "Transactions"
+        },
         template="plotly_white",
-        color_discrete_sequence=["#00A99D"],)
+        color_discrete_sequence=["#00A99D"]
+    )
 
     fig.update_traces(
         texttemplate="$%{text:,.2f}",
         textposition="outside",
         cliponaxis=False,
-        hovertemplate=("Month: %{x}<br>"
+        hovertemplate=(
+            "Month: %{x}<br>"
             "Payments: $%{y:,.2f}<br>"
-            "<extra></extra>"),)
+            "<extra></extra>"
+        )
+    )
 
-    fig.update_layout(height=450,showlegend=False,margin=dict(t=30, b=30, l=20, r=20),
-        xaxis_title="Month",yaxis_title="Total Payment",yaxis_tickprefix="$",yaxis_tickformat=",.0f",)
+    fig.update_layout(
+        height=450,
+        showlegend=False,
+        margin=dict(t=30, b=30, l=20, r=20),
+        xaxis_title="Month",
+        yaxis_title="Total Payment",
+        yaxis_tickprefix="$",
+        yaxis_tickformat=",.0f"
+    )
 
-    #st.plotly_chart(fig, use_container_width=True)
-    # Make monthly bars clickable
-    event = st.plotly_chart(fig,use_container_width=True,on_select="rerun",selection_mode="points")
-    
-    # Capture clicked month
+    # Enable bar selection
+    event = st.plotly_chart(
+        fig,
+        use_container_width=True,
+        on_select="rerun",
+        selection_mode="points",
+        key="monthly_payment_chart"
+    )
+
+    # Handle clicked month
     if event and event.selection.points:
-        selected_month = event.selection.points[0]["x"]
-    
-        # Save selected month and filtered data
-        st.session_state["selected_payment_month"] = str(selected_month)
-        st.session_state["payment_detail_data"] = filtered.copy()
-    
-        # Navigate to details page
-        st.switch_page("pages/2_Monthly_Payment_Details.py")
 
+        selected_month = str(
+            event.selection.points[0]["x"]
+        )
 
+        # Filter records for the selected month
+        selected_data = filtered[
+            filtered["month"].astype(str) == selected_month
+        ].copy()
+
+        if not selected_data.empty:
+
+            st.session_state["selected_payment_month"] = selected_month
+
+            st.session_state["payment_detail_data"] = selected_data
+
+            # Navigate to registered page
+            st.switch_page(
+                "pages/2_Monthly_Payment_Details.py"
+            )
 
 # --------------------------------------------------
 # MONTHLY PAYMENT BY CAR PARK NAME & MONTH
