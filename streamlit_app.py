@@ -19,7 +19,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-st.logo("assets/logo.png",size="large")
+st.logo("assets/goparkin_logo.png",size="large")
 
 # --------------------------------------------------
 # STYLING
