@@ -11,7 +11,7 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 st.set_page_config(page_title="EV Payments Dashboard",page_icon="",layout="wide",initial_sidebar_state="expanded",)
 
 # --------------------------------------------------
-# PROFESSIONAL DASHBOARD STYLING
+# DASHBOARD STYLING
 # --------------------------------------------------
 st.markdown("""
 <style>
@@ -26,6 +26,32 @@ st.markdown("""
         border-radius: 12px;
     }
     h1, h2, h3 {
+        color: #123047;
+    }
+
+        /* Match filter selection color to chart */
+    :root {
+        --primary-color: #00A99D;
+    }
+
+    /* Selected items in multiselect */
+    [data-baseweb="tag"] {
+        background-color: #00A99D !important;
+    }
+
+    /* Selected filter controls */
+    [data-baseweb="select"] div:focus-within {
+        border-color: #00A99D !important;
+        box-shadow: 0 0 0 1px #00A99D !important;
+    }
+
+    /* Date picker selected date */
+    [data-testid="stDateInput"] button {
+        color: #00A99D !important;
+    }
+
+    /* Sidebar filter labels */
+    [data-testid="stSidebar"] label {
         color: #123047;
     }
 </style>
