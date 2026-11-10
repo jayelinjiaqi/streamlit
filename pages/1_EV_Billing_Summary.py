@@ -14,7 +14,7 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 # PAGE NAVIGATION
 # --------------------------------------------------
 dashboard_page = st.Page("pages/1_EV_Billing_Summary.py", title="EV Billing Summary", default=True)
-monthly_details_page = st.Page("pages/pages/2_Monthly_Payment_Details.py", title="Monthly Payment Details") # check if it's pages/2_...
+monthly_details_page = st.Page("pages/2_Monthly_Payment_Details.py", title="Monthly Payment Details") # check if it's pages/2_...
 
 pg = st.navigation([dashboard_page, monthly_details_page])
 pg.run()
