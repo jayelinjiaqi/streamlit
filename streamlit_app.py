@@ -124,32 +124,6 @@ else:
 
 df["car_park_id"] = (df["car_park_id"].astype("string").fillna("Unknown"))
 
-# --------------------------------------------------
-# SIDEBAR FILTERS
-# --------------------------------------------------
-#st.sidebar.header("Dashboard Filters")
-#carparks = sorted(df["car_park_name"].astype(str).unique().tolist())
-
-#selected_carparks = st.sidebar.multiselect(
-#    "Car Park Name",
-#    options=carparks,
-#    default=carparks,
-#    help="Select one or more car parks.",)
-
-#if date_col and df["report_date"].notna().any():
-#    valid_dates = df["report_date"].dropna()
-
-#    min_date = valid_dates.min().date()
-#    max_date = valid_dates.max().date()
-
-#    date_range = st.sidebar.date_input("Transaction date range",value=(min_date, max_date),
-#        min_value=min_date,max_value=max_date,)
-#else:
-#    date_range = None
-
-#if st.sidebar.button("Refresh data"):
-#    load_ev_data.clear()
-#    st.rerun()
 
 
 # --------------------------------------------------
@@ -177,6 +151,18 @@ selected_operators = st.sidebar.multiselect(
     "Car Park Operator",
     options=operators,default=operators,help="Select one or more car park operators.",)
 
+# 4. Stake ID Filter
+if "ci_stake" in df.columns:
+    df["ci_stake"] = df["ci_stake"].astype("string").fillna("Unknown")
+    stakes = sorted(df["ci_stake"].unique().tolist())
+
+    selected_stakes = st.sidebar.multiselect("Stake ID",
+        options=stakes,default=stakes,help="Select one or more Stake IDs.")
+else:
+    selected_stakes = None
+    st.sidebar.warning("Stake ID column ci_stake not found.")
+
+
 if date_col and df["report_date"].notna().any():
     valid_dates = df["report_date"].dropna()
     min_date = valid_dates.min().date()
@@ -192,18 +178,22 @@ if st.sidebar.button("Refresh data"):
     st.rerun()
 
 
+
 # --------------------------------------------------
 # APPLY FILTERS
 # --------------------------------------------------
-#filtered = df[df["car_park_name"].isin(selected_carparks)].copy()
+#filtered = df[
+#    df["car_park_name"].isin(selected_carparks)
+#    & df["car_park_owner"].isin(selected_owners)
+#    & df["car_park_operator"].isin(selected_operators)].copy()
 
 #if date_range and len(date_range) == 2:
 #    start_date, end_date = date_range
 
-#    filtered = filtered[filtered["report_date"].notna()
+#    filtered = filtered[
+#        filtered["report_date"].notna()
 #        & (filtered["report_date"].dt.date >= start_date)
 #        & (filtered["report_date"].dt.date <= end_date)]
-
 
 # --------------------------------------------------
 # APPLY FILTERS
@@ -211,17 +201,20 @@ if st.sidebar.button("Refresh data"):
 filtered = df[
     df["car_park_name"].isin(selected_carparks)
     & df["car_park_owner"].isin(selected_owners)
-    & df["car_park_operator"].isin(selected_operators)
-].copy()
+    & df["car_park_operator"].isin(selected_operators)].copy()
 
+# Apply Stake ID filter
+if selected_stakes is not None:
+    filtered = filtered[filtered["ci_stake"].isin(selected_stakes)]
+
+# Apply date filter
 if date_range and len(date_range) == 2:
     start_date, end_date = date_range
 
     filtered = filtered[
         filtered["report_date"].notna()
         & (filtered["report_date"].dt.date >= start_date)
-        & (filtered["report_date"].dt.date <= end_date)
-    ]
+        & (filtered["report_date"].dt.date <= end_date)]
 
 # --------------------------------------------------
 # KPI CARDS
@@ -548,6 +541,54 @@ else:
         ))
 
     st.plotly_chart(fig, use_container_width=True)
+
+
+
+# --------------------------------------------------
+# ENERGY BY STAKE ID & MONTH
+# --------------------------------------------------
+st.subheader("Energy Delivered By Month & Stake ID")
+
+if "ci_stake" not in filtered.columns:
+    st.warning("ci_stake column was not found.")
+elif date_col is None:
+    st.warning("No supported date column was found.")
+elif filtered.empty or filtered["report_date"].notna().sum() == 0:
+    st.info("No valid transactions match the selected filters.")
+
+else:
+    monthly_stake_energy = (
+        filtered.dropna(subset=["report_date"])
+        .groupby(["month", "ci_stake"], as_index=False)
+        .agg(energy_delivered=("ci_power", "sum"),transactions=("ci_power", "count"))
+        .sort_values(["month", "ci_stake"])
+    )
+
+    fig = px.bar(monthly_stake_energy,x="month",y="energy_delivered",
+        color="ci_stake",barmode="group",
+        labels={"month": "Month","energy_delivered": "Energy Delivered","ci_stake": "Stake ID","transactions": "Transactions"},
+        template="plotly_white",
+        color_discrete_sequence=px.colors.qualitative.Safe
+    )
+
+    fig.update_traces(hovertemplate=(
+            "Month: %{x}<br>"
+            "Stake ID: %{fullData.name}<br>"
+            "Energy Delivered: %{y:,.0f} kWh<br>"
+            "Transactions: %{customdata[0]}<br>"
+            "<extra></extra>"
+        ),
+        customdata=monthly_stake_energy[["transactions"]].values
+    )
+
+    fig.update_layout(height=500,margin=dict(t=30, b=30, l=20, r=20),
+        xaxis_title="Month",yaxis_title="Total Energy Delivered",
+        yaxis_ticksuffix=" kWh",yaxis_tickformat=",.0f",
+        legend_title="Stake ID",
+        legend=dict(orientation="h",yanchor="bottom",y=1.02,xanchor="left",x=0))
+
+    st.plotly_chart(fig, use_container_width=True)
+
 
 
 # --------------------------------------------------
