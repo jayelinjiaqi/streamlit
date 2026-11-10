@@ -21,8 +21,13 @@ pg.run()
 # --------------------------------------------------
 # TOP LEFT BROWSER LOGO
 # --------------------------------------------------
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# Build safe paths relative to the project root directory
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 LOGO_PATH = os.path.join(BASE_DIR, "assets", "favicon.png")
+
+# Render logo safely
+if os.path.exists(LOGO_PATH):
+    st.logo(LOGO_PATH, size="large")
 
 logo = Image.open(LOGO_PATH)
 
@@ -676,8 +681,8 @@ else:
 # NAVIGATION
 # --------------------------------------------------
 if st.button("← Back to Dashboard"):
-    st.switch_page("streamlit_app.py")
-
+    #st.switch_page("streamlit_app.py")
+    st.switch_page("pages/1_EV_Billing_Summary.py")
 
 # --------------------------------------------------
 # TRANSACTION DATA TABLE
