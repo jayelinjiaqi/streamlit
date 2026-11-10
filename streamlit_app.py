@@ -153,7 +153,7 @@ selected_operators = st.sidebar.multiselect(
 
 # 4. Stake ID Filter
 if "ci_stake" in df.columns:
-    df["ci_stake"] = df["ci_stake"].astype("string").fillna("Unknown")
+    df["ci_stake"] = df["ci_stake_id"].astype("string").fillna("Unknown")
     stakes = sorted(df["ci_stake"].unique().tolist())
 
     selected_stakes = st.sidebar.multiselect("Stake ID",
