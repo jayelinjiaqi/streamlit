@@ -72,7 +72,8 @@ def load_ev_data():
             FROM ev e
             LEFT JOIN car_park c on e.car_park_id = c.id
             LEFT JOIN car_park_owner cpo on c.car_park_owner_id = cpo.id
-            LEFT JOIN car_park_operator op on c.car_park_operator_id = op.id""")
+            LEFT JOIN car_park_operator op on c.car_park_operator_id = op.id
+            LIMIT 10""")
             columns = [desc.name for desc in cur.description]
             rows = cur.fetchall()
     return pd.DataFrame(rows, columns=columns)
@@ -262,6 +263,44 @@ else:
     fig = px.bar(monthly,x="month",y="payment_amount",text="payment_amount",
         hover_data={"transactions": True},
         labels={"month": "Month","payment_amount": "Payment Amount","transactions": "Transactions",},
+        template="plotly_white",
+        color_discrete_sequence=["#00A99D"],)
+
+    fig.update_traces(
+        texttemplate="$%{text:,.2f}",
+        textposition="outside",
+        cliponaxis=False,
+        hovertemplate=("Month: %{x}<br>"
+            "Payments: $%{y:,.2f}<br>"
+            "<extra></extra>"),)
+
+    fig.update_layout(height=450,showlegend=False,margin=dict(t=30, b=30, l=20, r=20),
+        xaxis_title="Month",yaxis_title="Total Payment",yaxis_tickprefix="$",yaxis_tickformat=",.2f",)
+
+    st.plotly_chart(fig, use_container_width=True)
+
+
+# --------------------------------------------------
+# MONTHLY ENERGY CHART
+# --------------------------------------------------
+st.subheader("Energy Delivered By Month")
+
+if date_col is None:
+    st.warning("No supported date column was found. "
+        "Add your actual transaction date column to date_candidates.")
+elif filtered["report_date"].notna().sum() == 0:
+    st.warning("No valid transaction dates are available.")
+elif filtered.empty:
+    st.info("No transactions match the selected filters.")
+else:
+    monthly = (filtered.dropna(subset=["report_date"])
+        .groupby("month", as_index=False)
+        .agg(energy_delivered=("ci_power", "sum"),
+            transactions=("energy_delivered", "size"),).sort_values("month"))
+
+    fig = px.bar(monthly,x="month",y="energy_delivered",text="energy_delivered",
+        hover_data={"transactions": True},
+        labels={"month": "Month","energy_delivered": "Energy Delivered","transactions": "Transactions",},
         template="plotly_white",
         color_discrete_sequence=["#00A99D"],)
 
