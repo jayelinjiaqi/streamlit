@@ -1,5 +1,5 @@
 [theme]
 primaryColor = "#334155"          # Dark Slate accent
 backgroundColor = "#FFFFFF"       # Clean white background
-secondaryBackgroundColor = "#00A99D" # Cool light gray container background
+secondaryBackgroundColor = "#F1F5F9" # Left panel color cool light grey
 textColor = "#1E293B"             # Deep charcoal text
