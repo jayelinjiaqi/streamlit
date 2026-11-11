@@ -5,6 +5,7 @@ import streamlit as st
 import plotly.express as px
 from dotenv import load_dotenv
 import os
+from PIL import Image
 
 load_dotenv()
 DATABASE_URL = os.getenv("DATABASE_URL")
