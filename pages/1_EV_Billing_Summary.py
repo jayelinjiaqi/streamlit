@@ -388,7 +388,8 @@ else:
     selected_points = event.selection.points
     
     if selected_points:
-        selected_month = str(selected_points[0]["x"])
+        #selected_month = str(selected_points[0]["x"])
+        selected_month = pd.to_datetime(selected_points[0]["x"]).strftime("%Y-%m")
         st.session_state["selected_payment_month"] = selected_month
     else:
         selected_month = st.session_state.get("selected_payment_month")
