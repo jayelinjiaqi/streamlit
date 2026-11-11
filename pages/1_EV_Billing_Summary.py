@@ -338,6 +338,12 @@ else:
         .sort_values("month")
     )
 
+    st.write("Monthly chart data:")
+    st.dataframe(monthly)
+    
+    st.write("Available months:")
+    st.write(filtered["month"].unique().tolist())
+
     fig = px.bar(
         monthly,
         x="month",
@@ -386,75 +392,60 @@ else:
     # ----------------------------------------------
     # DISPLAY SELECTED MONTH BREAKDOWN
     # ----------------------------------------------
+    st.write("Selected month:", repr(selected_month))
 
+    st.write("Filtered month values:",filtered["month"].astype(str).unique().tolist())
     selected_points = event.selection.points
-
+    
     if selected_points:
-
-        selected_month = str(
-            selected_points[0]["x"]
-        )
-
+        selected_month = str(selected_points[0]["x"])
         st.session_state["selected_payment_month"] = selected_month
-
-    selected_month = st.session_state.get(
-        "selected_payment_month"
-    )
-
-    if selected_month:
-
+    else:
+        selected_month = st.session_state.get("selected_payment_month")
+    
+    if selected_month is not None:
         st.divider()
-
-        st.subheader(
-            f"Payment Breakdown By Car Park - {selected_month}"
-        )
-
-        selected_data = filtered[
-            filtered["month"].astype(str) == selected_month
+        st.subheader(f"Payment Breakdown By Car Park - {selected_month}")
+    
+        # Ensure month values are strings
+        filtered["month"] = filtered["month"].astype(str)
+    
+        # Debug: check available data
+        st.write("Selected month:", repr(selected_month))
+    
+        st.write("Available months:",filtered["month"].unique().tolist())
+    
+        # Filter transactions
+        selected_data = filtered.loc[
+            filtered["month"].str.strip()
+            == selected_month.strip()
         ].copy()
-
+    
+        st.write("Number of matching transactions:",len(selected_data))
+    
         if not selected_data.empty:
-
             carpark_breakdown = (
                 selected_data
                 .groupby("car_park_name", as_index=False)
-                .agg(
-                    payment_amount=("payment_amount", "sum"),
-                    transactions=("payment_amount", "size")
-                )
-                .sort_values(
-                    "payment_amount",
-                    ascending=False
-                )
-            )
-
+                .agg(payment_amount=("payment_amount", "sum"),
+                    transactions=("payment_amount", "size"))
+                .sort_values("payment_amount",ascending=False))
+    
             fig_detail = px.bar(
                 carpark_breakdown,
                 x="car_park_name",
                 y="payment_amount",
                 text="payment_amount",
-                hover_data={"transactions": True},
-                labels={
-                    "car_park_name": "Car Park Name",
-                    "payment_amount": "Total Payment",
-                    "transactions": "Transactions"
-                },
                 template="plotly_white",
-                color_discrete_sequence=["#123047"]
+                color_discrete_sequence=["#00A99D"]
             )
-
+    
             fig_detail.update_traces(
                 texttemplate="$%{text:,.2f}",
                 textposition="outside",
-                cliponaxis=False,
-                hovertemplate=(
-                    "Car Park: %{x}<br>"
-                    "Payment: $%{y:,.2f}<br>"
-                    "Transactions: %{customdata[0]}<br>"
-                    "<extra></extra>"
-                )
+                cliponaxis=False
             )
-
+    
             fig_detail.update_layout(
                 height=450,
                 showlegend=False,
@@ -463,35 +454,23 @@ else:
                 yaxis_tickprefix="$",
                 yaxis_tickformat=",.2f"
             )
-
-            st.plotly_chart(
-                fig_detail,
-                use_container_width=True,
-                key="selected_month_carpark_chart"
-            )
-
+    
+            st.plotly_chart(fig_detail,
+                use_container_width=True)
+    
             st.dataframe(
-                carpark_breakdown.rename(
-                    columns={
-                        "car_park_name": "Car Park Name",
-                        "payment_amount": "Total Payment",
-                        "transactions": "Transactions"
-                    }
-                ).style.format({
-                    "Total Payment": "${:,.2f}"
-                }),
+                carpark_breakdown,
                 use_container_width=True,
                 hide_index=True
             )
-
-            if st.button("Clear selected month"):
-                st.session_state.pop(
-                    "selected_payment_month", None
-                )
-                st.rerun()
-
+    
         else:
-            st.info("No payment records found for this month.")
+            st.warning(
+                "No matching transactions. Please check the month values above."
+            )
+
+
+
 
 
 
