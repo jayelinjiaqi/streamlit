@@ -397,50 +397,32 @@ else:
     # ----------------------------------------------
     # DEBUG SECTION
     # ----------------------------------------------
-    st.write("DEBUG - Selected month:", repr(selected_month))
-    st.write("DEBUG - Available months:",filtered["month"].unique().tolist())
-    
-    st.write("DEBUG - Sample transaction records:",filtered[["month", "payment_amount", "car_park_name"]].head(10))
+    #st.write("DEBUG - Selected month:", repr(selected_month))
+    #st.write("DEBUG - Available months:",filtered["month"].unique().tolist())
+    #st.write("DEBUG - Sample transaction records:",filtered[["month", "payment_amount", "car_park_name"]].head(10))
 
     # ----------------------------------------------
     # DISPLAY MONTHLY CAR PARK BREAKDOWN
     # ----------------------------------------------
     if selected_month is not None:
 
-        selected_data = filtered[
-            filtered["month"].astype(str).str.strip()
-            == str(selected_month).strip()
-        ].copy()
+        selected_data = filtered[filtered["month"].astype(str).str.strip() == str(selected_month).strip()].copy()
 
         st.divider()
 
-        st.subheader(
-            f"Payment Breakdown By Car Park - {selected_month}"
-        )
+        st.subheader(f"Payment Breakdown By Car Park - {selected_month}")
 
         if not selected_data.empty:
 
             carpark_breakdown = (
                 selected_data
                 .groupby("car_park_name", as_index=False)
-                .agg(
-                    payment_amount=("payment_amount", "sum"),
-                    transactions=("payment_amount", "size")
-                )
-                .sort_values(
-                    "payment_amount",
-                    ascending=False
-                )
+                .agg(payment_amount=("payment_amount", "sum"),transactions=("payment_amount", "size"))
+                .sort_values("payment_amount",ascending=False)
             )
 
-            fig_detail = px.bar(
-                carpark_breakdown,
-                x="car_park_name",
-                y="payment_amount",
-                text="payment_amount",
-                template="plotly_white",
-                color_discrete_sequence=["#00A99D"]
-            )
+            fig_detail = px.bar(carpark_breakdown,x="car_park_name",y="payment_amount",
+                text="payment_amount",template="plotly_white",color_discrete_sequence=["#00A99D"])
 
             fig_detail.update_traces(
                 texttemplate="$%{text:,.2f}",
@@ -463,24 +445,11 @@ else:
                 yaxis_tickformat=",.2f"
             )
 
-            st.plotly_chart(
-                fig_detail,
-                use_container_width=True
-            )
-
-            st.dataframe(
-                carpark_breakdown,
-                use_container_width=True,
-                hide_index=True
-            )
+            st.plotly_chart(fig_detail,use_container_width=True)
+            st.dataframe(carpark_breakdown,use_container_width=True,hide_index=True)
 
         else:
-            st.warning(
-                "No matching transactions found for this month."
-            )
-
-
-
+            st.warning("No matching transactions found for this month.")
 
 
 
