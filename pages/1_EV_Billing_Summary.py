@@ -387,6 +387,20 @@ else:
     # ----------------------------------------------
     selected_points = event.selection.points
 
+    # DEBUG SECTION
+    st.write("DEBUG - Selected month:", repr(selected_month) 
+             if "selected_month" in locals() else "Not assigned")
+    
+    st.write(
+        "DEBUG - Available months:",
+        filtered["month"].unique().tolist()
+    )
+    
+    st.write(
+        "DEBUG - Sample transaction records:",
+        filtered[["month", "payment_amount", "car_park_name"]].head(10)
+    )
+
     if selected_points:
         selected_month = str(selected_points[0]["x"])
 
