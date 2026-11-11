@@ -309,6 +309,7 @@ st.divider()
 
 
 
+
 # --------------------------------------------------
 # MONTHLY PAYMENT CHART
 # --------------------------------------------------
@@ -324,6 +325,7 @@ elif filtered.empty:
     st.info("No transactions match the selected filters.")
 
 else:
+
     monthly = (
         filtered.dropna(subset=["report_date"])
         .groupby("month", as_index=False)
@@ -342,7 +344,7 @@ else:
         custom_data=["transactions"],
         labels={
             "month": "Month",
-            "payment_amount": "Payment Amount",
+            "payment_amount": "Payment Amount"
         },
         template="plotly_white",
         color_discrete_sequence=["#00A99D"]
@@ -367,11 +369,13 @@ else:
         xaxis_title="Month",
         yaxis_title="Total Payment",
         yaxis_tickprefix="$",
-        yaxis_tickformat=",.0f",
+        yaxis_tickformat=",.2f",
         clickmode="event+select"
     )
 
-    # Capture bar click
+    # ----------------------------------------------
+    # CAPTURE SELECTED BAR
+    # ----------------------------------------------
     event = st.plotly_chart(
         fig,
         use_container_width=True,
@@ -380,26 +384,39 @@ else:
         key="monthly_payment_chart"
     )
 
-    # Process selected bar
-    if event and event.selection.points:
+    # ----------------------------------------------
+    # NAVIGATE TO PAYMENT DETAILS
+    # ----------------------------------------------
+    selected_points = event.selection.points
+
+    if selected_points:
 
         selected_month = str(
-            event.selection.points[0]["x"]
+            selected_points[0]["x"]
         )
 
+        # Save selected month
+        st.session_state["selected_payment_month"] = (
+            selected_month
+        )
+
+        # Retrieve all filtered transactions for that month
         selected_data = filtered[
             filtered["month"].astype(str) == selected_month
         ].copy()
 
+        # Save transaction data
+        st.session_state["payment_detail_data"] = (
+            selected_data
+        )
+
+        # Navigate to details page
         if not selected_data.empty:
-
-            st.session_state["selected_payment_month"] = selected_month
-
-            st.session_state["payment_detail_data"] = selected_data
 
             st.switch_page(
                 "pages/2_Monthly_Payment_Details.py"
             )
+
 
 
 # --------------------------------------------------
