@@ -415,31 +415,12 @@ else:
 
 
 
+
 # -------------------------------------
 # PAYMENT BY CAR PARK NAME
+# CLICK TO SHOW MONTHLY BREAKDOWN
+# CLICK AGAIN TO HIDE
 # -------------------------------------
-
-# Callback to toggle selected car park
-def toggle_carpark_selection():
-    points = st.session_state[
-        "carpark_payment_chart"
-    ].selection.points
-
-    if points:
-        clicked_carpark = points[0]["y"]
-
-        current_carpark = st.session_state.get(
-            "selected_carpark"
-        )
-
-        if current_carpark == clicked_carpark:
-            st.session_state["selected_carpark"] = None
-        else:
-            st.session_state["selected_carpark"] = clicked_carpark
-
-    else:
-        st.session_state["selected_carpark"] = None
-
 
 st.subheader("Total Payment By Carpark")
 
@@ -457,19 +438,25 @@ else:
     # -------------------------------------
     # TOTAL PAYMENT BY CAR PARK
     # -------------------------------------
+
     monthly_carpark = (
         filtered.dropna(subset=["report_date"])
         .groupby("car_park_name", as_index=False)
-        .agg(payment_amount=("payment_amount", "sum"),transactions=("payment_amount", "size"))
+        .agg(
+            payment_amount=("payment_amount", "sum"),
+            transactions=("payment_amount", "size")
+        )
         .sort_values("payment_amount", ascending=False)
     )
 
+    # Create horizontal bar chart
     fig = px.bar(
         monthly_carpark,
         x="payment_amount",
         y="car_park_name",
         orientation="h",
         text="payment_amount",
+        custom_data=["car_park_name"],
         hover_data={"transactions": True},
         labels={
             "car_park_name": "Car Park Name",
@@ -504,22 +491,46 @@ else:
     )
 
     # -------------------------------------
-    # CLICK TO SELECT / CLICK AGAIN TO HIDE
+    # CHART CLICK EVENT
     # -------------------------------------
-    st.plotly_chart(
+
+    event = st.plotly_chart(
         fig,
         use_container_width=True,
         key="carpark_payment_chart",
-        on_select=toggle_carpark_selection,
+        on_select="rerun",
         selection_mode="points"
     )
 
     # -------------------------------------
-    # DISPLAY SELECTED CAR PARK BY MONTH
+    # GET SELECTED CAR PARK
     # -------------------------------------
+
+    selected_points = event.selection.points
+
+    if selected_points:
+
+        clicked_carpark = selected_points[0]["y"]
+
+        current_carpark = st.session_state.get(
+            "selected_carpark"
+        )
+
+        # Click again to hide
+        if current_carpark == clicked_carpark:
+            st.session_state["selected_carpark"] = None
+
+        # Select another car park
+        else:
+            st.session_state["selected_carpark"] = clicked_carpark
+
     selected_carpark = st.session_state.get(
         "selected_carpark"
     )
+
+    # -------------------------------------
+    # DISPLAY MONTHLY PAYMENT BREAKDOWN
+    # -------------------------------------
 
     if selected_carpark is not None:
 
@@ -583,7 +594,8 @@ else:
 
             st.plotly_chart(
                 fig_monthly,
-                use_container_width=True
+                use_container_width=True,
+                key="selected_carpark_monthly_chart"
             )
 
             st.dataframe(
@@ -594,6 +606,7 @@ else:
 
         else:
             st.info("No monthly payment records found.")
+
 
 
 
