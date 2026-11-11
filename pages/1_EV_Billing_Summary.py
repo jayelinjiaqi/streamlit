@@ -536,36 +536,24 @@ else:
 
         st.divider()
 
-        st.subheader(
-            f"Monthly Payment Breakdown - {selected_carpark}"
-        )
+        st.subheader(f"Monthly Payment Breakdown - {selected_carpark}")
 
         carpark_monthly = (
-            filtered[
-                filtered["car_park_name"] == selected_carpark
-            ]
+            filtered[filtered["car_park_name"] == selected_carpark]
             .dropna(subset=["report_date"])
             .groupby("month", as_index=False)
-            .agg(
-                payment_amount=("payment_amount", "sum"),
-                transactions=("payment_amount", "size")
-            )
+            .agg(payment_amount=("payment_amount", "sum"),transactions=("payment_amount", "size"))
             .sort_values("month")
         )
 
         if not carpark_monthly.empty:
-
             fig_monthly = px.bar(
                 carpark_monthly,
                 x="month",
                 y="payment_amount",
                 text="payment_amount",
                 hover_data={"transactions": True},
-                labels={
-                    "month": "Month",
-                    "payment_amount": "Payment Amount",
-                    "transactions": "Transactions"
-                },
+                labels={"month": "Month","payment_amount": "Payment Amount","transactions": "Transactions"},
                 template="plotly_white",
                 color_discrete_sequence=["#00A99D"]
             )
@@ -597,18 +585,10 @@ else:
                 use_container_width=True,
                 key="selected_carpark_monthly_chart"
             )
-
-            st.dataframe(
-                carpark_monthly,
-                use_container_width=True,
-                hide_index=True
-            )
+            st.dataframe(carpark_monthly,use_container_width=True,hide_index=True)
 
         else:
             st.info("No monthly payment records found.")
-
-
-
 
 
 
@@ -617,13 +597,10 @@ else:
 # --------------------------------------------------
 
 st.subheader("Total Payment By Carpark Owner")
-
 if date_col is None:
     st.warning("No supported date column was found.")
-
 elif filtered["report_date"].notna().sum() == 0:
     st.warning("No valid transaction dates are available.")
-
 elif filtered.empty:
     st.info("No transactions match the selected filters.")
 
@@ -636,10 +613,7 @@ else:
     owner_payment = (
         filtered.dropna(subset=["report_date"])
         .groupby("car_park_owner", as_index=False)
-        .agg(
-            payment_amount=("payment_amount", "sum"),
-            transactions=("payment_amount", "size")
-        )
+        .agg(payment_amount=("payment_amount", "sum"),transactions=("payment_amount", "size"))
         .sort_values("payment_amount", ascending=False)
     )
 
@@ -1024,47 +998,193 @@ else:
 
 
 
+
 # --------------------------------------------------
-# ENERGY BY CARPARK & MONTH
+# ENERGY BY CAR PARK
 # --------------------------------------------------
-st.subheader("Energy Delivered By Carpark & Month")
+
+st.subheader("Energy Delivered By Carpark")
 
 if date_col is None:
     st.warning("No supported date column was found.")
+
 elif filtered["report_date"].notna().sum() == 0:
     st.warning("No valid transaction dates are available.")
+
 elif filtered.empty:
     st.info("No transactions match the selected filters.")
+
 else:
-    monthly_carpark_energy = (filtered.dropna(subset=["report_date"])
-        .groupby(["month", "car_park_name"], as_index=False)
-        .agg(energy_delivered=("ci_power", "sum"),transactions=("ci_power", "count"))
-        .sort_values(["month", "car_park_name"])
+
+    # -------------------------------------
+    # TOTAL ENERGY BY CAR PARK
+    # -------------------------------------
+
+    carpark_energy = (
+        filtered.dropna(subset=["report_date"])
+        .groupby("car_park_name", as_index=False)
+        .agg(
+            energy_delivered=("ci_power", "sum"),
+            transactions=("ci_power", "count")
+        )
+        .sort_values("energy_delivered", ascending=False)
     )
 
-    fig = px.bar(monthly_carpark_energy,x="month",y="energy_delivered",
-        color="car_park_name",barmode="group",
+    fig_carpark_energy = px.bar(
+        carpark_energy,
+        x="energy_delivered",
+        y="car_park_name",
+        orientation="h",
+        text="energy_delivered",
         hover_data={"transactions": True},
-        labels={"month": "Month","energy_delivered": "Energy Delivered","car_park_name": "Car Park Name","transactions": "Transactions"},
+        labels={
+            "car_park_name": "Car Park Name",
+            "energy_delivered": "Energy Delivered",
+            "transactions": "Transactions"
+        },
         template="plotly_white",
-        color_discrete_sequence=px.colors.qualitative.Safe
+        color_discrete_sequence=["#00A99D"]
     )
 
-    fig.update_traces(hovertemplate=("Month: %{x}<br>"
-            "Car Park: %{fullData.name}<br>"
-            "Energy Delivered: %{y:,.0f} kWh<br>"
+    fig_carpark_energy.update_traces(
+        texttemplate="%{text:,.0f} kWh",
+        textposition="outside",
+        cliponaxis=False,
+        hovertemplate=(
+            "Car Park: %{y}<br>"
+            "Energy Delivered: %{x:,.2f} kWh<br>"
             "Transactions: %{customdata[0]}<br>"
             "<extra></extra>"
-        ),
-        customdata=monthly_carpark_energy[["transactions"]].values
+        )
     )
 
-    fig.update_layout(height=500,margin=dict(t=30, b=30, l=20, r=20),
-        xaxis_title="Month",yaxis_title="Total Energy Delivered",
-        yaxis_ticksuffix=" kWh",yaxis_tickformat=",.0f",legend_title="Car Park Name",
-        legend=dict(orientation="h",yanchor="bottom",y=1.02,xanchor="left",x=0))
+    fig_carpark_energy.update_layout(
+        height=600,
+        margin=dict(t=30, b=30, l=20, r=110),
+        xaxis_title="Total Energy Delivered (kWh)",
+        yaxis_title="Car Park Name",
+        xaxis_ticksuffix=" kWh",
+        xaxis_tickformat=",.0f",
+        yaxis=dict(categoryorder="total ascending"),
+        showlegend=False
+    )
 
-    st.plotly_chart(fig, use_container_width=True)
+    # -------------------------------------
+    # CLICK TO SELECT / CLICK AGAIN TO HIDE
+    # -------------------------------------
+
+    def toggle_carpark_energy_selection():
+
+        points = st.session_state[
+            "carpark_energy_chart"
+        ].selection.points
+
+        if points:
+
+            clicked_carpark = points[0]["y"]
+
+            current_carpark = st.session_state.get(
+                "selected_energy_carpark"
+            )
+
+            if current_carpark == clicked_carpark:
+                st.session_state["selected_energy_carpark"] = None
+            else:
+                st.session_state["selected_energy_carpark"] = clicked_carpark
+
+        else:
+            st.session_state["selected_energy_carpark"] = None
+
+    st.plotly_chart(
+        fig_carpark_energy,
+        use_container_width=True,
+        key="carpark_energy_chart",
+        on_select=toggle_carpark_energy_selection,
+        selection_mode="points"
+    )
+
+    # -------------------------------------
+    # DISPLAY SELECTED CAR PARK BY MONTH
+    # -------------------------------------
+
+    selected_energy_carpark = st.session_state.get(
+        "selected_energy_carpark"
+    )
+
+    if selected_energy_carpark is not None:
+
+        st.divider()
+
+        st.subheader(
+            f"Monthly Energy Breakdown - {selected_energy_carpark}"
+        )
+
+        carpark_monthly_energy = (
+            filtered[
+                filtered["car_park_name"] == selected_energy_carpark
+            ]
+            .dropna(subset=["report_date"])
+            .groupby("month", as_index=False)
+            .agg(
+                energy_delivered=("ci_power", "sum"),
+                transactions=("ci_power", "count")
+            )
+            .sort_values("month")
+        )
+
+        if not carpark_monthly_energy.empty:
+
+            fig_carpark_monthly_energy = px.bar(
+                carpark_monthly_energy,
+                x="month",
+                y="energy_delivered",
+                text="energy_delivered",
+                hover_data={"transactions": True},
+                labels={
+                    "month": "Month",
+                    "energy_delivered": "Energy Delivered",
+                    "transactions": "Transactions"
+                },
+                template="plotly_white",
+                color_discrete_sequence=["#00A99D"]
+            )
+
+            fig_carpark_monthly_energy.update_traces(
+                texttemplate="%{text:,.0f} kWh",
+                textposition="outside",
+                cliponaxis=False,
+                hovertemplate=(
+                    "Month: %{x}<br>"
+                    "Energy Delivered: %{y:,.2f} kWh<br>"
+                    "Transactions: %{customdata[0]}<br>"
+                    "<extra></extra>"
+                )
+            )
+
+            fig_carpark_monthly_energy.update_layout(
+                height=450,
+                showlegend=False,
+                margin=dict(t=30, b=30, l=20, r=40),
+                xaxis_title="Month",
+                yaxis_title="Energy Delivered (kWh)",
+                yaxis_ticksuffix=" kWh",
+                yaxis_tickformat=",.0f"
+            )
+
+            st.plotly_chart(
+                fig_carpark_monthly_energy,
+                use_container_width=True
+            )
+
+            st.dataframe(
+                carpark_monthly_energy,
+                use_container_width=True,
+                hide_index=True
+            )
+
+        else:
+            st.info("No monthly energy records found.")
+
 
 
 
