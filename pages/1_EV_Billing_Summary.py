@@ -691,45 +691,23 @@ else:
     # -------------------------------------
     # DISPLAY SELECTED OWNER BY MONTH
     # -------------------------------------
-
-    selected_owner = st.session_state.get(
-        "selected_owner"
-    )
+    selected_owner = st.session_state.get("selected_owner")
 
     if selected_owner is not None:
-
         st.divider()
+        st.subheader(f"Monthly Payment Breakdown - {selected_owner}")
 
-        st.subheader(
-            f"Monthly Payment Breakdown - {selected_owner}"
-        )
-
-        owner_monthly = (
-            filtered[
-                filtered["car_park_owner"] == selected_owner
-            ]
+        owner_monthly = (filtered[filtered["car_park_owner"] == selected_owner]
             .dropna(subset=["report_date"])
             .groupby("month", as_index=False)
-            .agg(
-                payment_amount=("payment_amount", "sum"),
-                transactions=("payment_amount", "size")
-            )
+            .agg(payment_amount=("payment_amount", "sum"),transactions=("payment_amount", "size"))
             .sort_values("month")
         )
 
         if not owner_monthly.empty:
-
-            fig_owner_monthly = px.bar(
-                owner_monthly,
-                x="month",
-                y="payment_amount",
-                text="payment_amount",
-                hover_data={"transactions": True},
-                labels={
-                    "month": "Month",
-                    "payment_amount": "Payment Amount",
-                    "transactions": "Transactions"
-                },
+            fig_owner_monthly = px.bar(owner_monthly,x="month",y="payment_amount",
+                text="payment_amount",hover_data={"transactions": True},
+                labels={"month": "Month","payment_amount": "Payment Amount","transactions": "Transactions"},
                 template="plotly_white",
                 color_discrete_sequence=["#00A99D"]
             )
@@ -746,26 +724,11 @@ else:
                 )
             )
 
-            fig_owner_monthly.update_layout(
-                height=450,
-                showlegend=False,
-                margin=dict(t=30, b=30, l=20, r=30),
-                xaxis_title="Month",
-                yaxis_title="Total Payment",
-                yaxis_tickprefix="$",
-                yaxis_tickformat=",.2f"
-            )
+            fig_owner_monthly.update_layout(height=450,showlegend=False,margin=dict(t=30, b=30, l=20, r=30),
+                xaxis_title="Month",yaxis_title="Total Payment",yaxis_tickprefix="$",yaxis_tickformat=",.2f")
 
-            st.plotly_chart(
-                fig_owner_monthly,
-                use_container_width=True
-            )
-
-            st.dataframe(
-                owner_monthly,
-                use_container_width=True,
-                hide_index=True
-            )
+            st.plotly_chart(fig_owner_monthly,use_container_width=True)
+            st.dataframe(owner_monthly,use_container_width=True,hide_index=True)
 
         else:
             st.info("No monthly payment records found.")
@@ -775,18 +738,13 @@ else:
 # --------------------------------------------------
 # PAYMENT BY CAR PARK OPERATOR
 # --------------------------------------------------
-
 st.subheader("Total Payment By Carpark Operator")
-
 if date_col is None:
     st.warning("No supported date column was found.")
-
 elif filtered["report_date"].notna().sum() == 0:
     st.warning("No valid transaction dates are available.")
-
 elif filtered.empty:
     st.info("No transactions match the selected filters.")
-
 else:
 
     # -------------------------------------
@@ -796,25 +754,14 @@ else:
     operator_payment = (
         filtered.dropna(subset=["report_date"])
         .groupby("car_park_operator", as_index=False)
-        .agg(
-            payment_amount=("payment_amount", "sum"),
-            transactions=("payment_amount", "size")
-        )
+        .agg(payment_amount=("payment_amount", "sum"),transactions=("payment_amount", "size"))
         .sort_values("payment_amount", ascending=False)
     )
 
-    fig_operator = px.bar(
-        operator_payment,
-        x="payment_amount",
-        y="car_park_operator",
-        orientation="h",
-        text="payment_amount",
+    fig_operator = px.bar(operator_payment,x="payment_amount",y="car_park_operator",
+        orientation="h",text="payment_amount",
         hover_data={"transactions": True},
-        labels={
-            "car_park_operator": "Car Park Operator",
-            "payment_amount": "Payment Amount",
-            "transactions": "Transactions"
-        },
+        labels={"car_park_operator": "Car Park Operator","payment_amount": "Payment Amount","transactions": "Transactions"},
         template="plotly_white",
         color_discrete_sequence=["#00A99D"]
     )
@@ -831,21 +778,13 @@ else:
         )
     )
 
-    fig_operator.update_layout(
-        height=600,
-        margin=dict(t=30, b=30, l=20, r=100),
-        xaxis_title="Total Payment",
-        yaxis_title="Car Park Operator",
-        xaxis_tickprefix="$",
-        xaxis_tickformat=",.2f",
-        yaxis=dict(categoryorder="total ascending"),
-        showlegend=False
-    )
+    fig_operator.update_layout(height=600,margin=dict(t=30, b=30, l=20, r=100),
+        xaxis_title="Total Payment",yaxis_title="Car Park Operator",xaxis_tickprefix="$",xaxis_tickformat=",.2f",
+        yaxis=dict(categoryorder="total ascending"),showlegend=False)
 
     # -------------------------------------
     # CLICK TO SELECT / CLICK AGAIN TO HIDE
     # -------------------------------------
-
     def toggle_operator_selection():
         points = st.session_state[
             "operator_payment_chart"
@@ -854,68 +793,36 @@ else:
         if points:
             clicked_operator = points[0]["y"]
 
-            current_operator = st.session_state.get(
-                "selected_operator"
-            )
-
+            current_operator = st.session_state.get("selected_operator")
             if current_operator == clicked_operator:
                 st.session_state["selected_operator"] = None
             else:
                 st.session_state["selected_operator"] = clicked_operator
-
         else:
             st.session_state["selected_operator"] = None
 
-    st.plotly_chart(
-        fig_operator,
-        use_container_width=True,
-        key="operator_payment_chart",
-        on_select=toggle_operator_selection,
-        selection_mode="points"
-    )
+    st.plotly_chart(fig_operator,use_container_width=True,key="operator_payment_chart",
+        on_select=toggle_operator_selection,selection_mode="points")
 
     # -------------------------------------
     # DISPLAY SELECTED OPERATOR BY MONTH
     # -------------------------------------
-
-    selected_operator = st.session_state.get(
-        "selected_operator"
-    )
-
+    selected_operator = st.session_state.get("selected_operator")
     if selected_operator is not None:
-
         st.divider()
+        st.subheader(f"Monthly Payment Breakdown - {selected_operator}")
 
-        st.subheader(
-            f"Monthly Payment Breakdown - {selected_operator}"
-        )
-
-        operator_monthly = (
-            filtered[
-                filtered["car_park_operator"] == selected_operator
-            ]
+        operator_monthly = (filtered[filtered["car_park_operator"] == selected_operator]
             .dropna(subset=["report_date"])
             .groupby("month", as_index=False)
-            .agg(
-                payment_amount=("payment_amount", "sum"),
-                transactions=("payment_amount", "size")
-            )
+            .agg(payment_amount=("payment_amount", "sum"),transactions=("payment_amount", "size"))
             .sort_values("month")
         )
 
         if not operator_monthly.empty:
-
-            fig_operator_monthly = px.bar(
-                operator_monthly,
-                x="month",
-                y="payment_amount",
-                text="payment_amount",
-                hover_data={"transactions": True},
-                labels={
-                    "month": "Month",
-                    "payment_amount": "Payment Amount",
-                    "transactions": "Transactions"
-                },
+            fig_operator_monthly = px.bar(operator_monthly,x="month",y="payment_amount",
+                text="payment_amount",hover_data={"transactions": True},
+                labels={"month": "Month","payment_amount": "Payment Amount","transactions": "Transactions"},
                 template="plotly_white",
                 color_discrete_sequence=["#00A99D"]
             )
@@ -941,18 +848,8 @@ else:
                 yaxis_tickprefix="$",
                 yaxis_tickformat=",.2f"
             )
-
-            st.plotly_chart(
-                fig_operator_monthly,
-                use_container_width=True
-            )
-
-            st.dataframe(
-                operator_monthly,
-                use_container_width=True,
-                hide_index=True
-            )
-
+            st.plotly_chart(fig_operator_monthly,use_container_width=True)
+            st.dataframe(operator_monthly,use_container_width=True,hide_index=True)
         else:
             st.info("No monthly payment records found.")
 
@@ -1080,13 +977,9 @@ else:
         ].selection.points
 
         if points:
-
             clicked_carpark = points[0]["y"]
 
-            current_carpark = st.session_state.get(
-                "selected_energy_carpark"
-            )
-
+            current_carpark = st.session_state.get("selected_energy_carpark")
             if current_carpark == clicked_carpark:
                 st.session_state["selected_energy_carpark"] = None
             else:
@@ -1095,56 +988,29 @@ else:
         else:
             st.session_state["selected_energy_carpark"] = None
 
-    st.plotly_chart(
-        fig_carpark_energy,
-        use_container_width=True,
-        key="carpark_energy_chart",
-        on_select=toggle_carpark_energy_selection,
-        selection_mode="points"
-    )
+    st.plotly_chart(fig_carpark_energy,use_container_width=True,key="carpark_energy_chart",
+        on_select=toggle_carpark_energy_selection,selection_mode="points")
 
     # -------------------------------------
     # DISPLAY SELECTED CAR PARK BY MONTH
     # -------------------------------------
-
-    selected_energy_carpark = st.session_state.get(
-        "selected_energy_carpark"
-    )
+    selected_energy_carpark = st.session_state.get("selected_energy_carpark")
 
     if selected_energy_carpark is not None:
-
         st.divider()
+        st.subheader(f"Monthly Energy Breakdown - {selected_energy_carpark}")
 
-        st.subheader(
-            f"Monthly Energy Breakdown - {selected_energy_carpark}"
-        )
-
-        carpark_monthly_energy = (
-            filtered[
-                filtered["car_park_name"] == selected_energy_carpark
-            ]
+        carpark_monthly_energy = (filtered[filtered["car_park_name"] == selected_energy_carpark]
             .dropna(subset=["report_date"])
             .groupby("month", as_index=False)
-            .agg(
-                energy_delivered=("ci_power", "sum"),
-                transactions=("ci_power", "count")
-            )
+            .agg(energy_delivered=("ci_power", "sum"),transactions=("ci_power", "count"))
             .sort_values("month")
         )
 
         if not carpark_monthly_energy.empty:
-
-            fig_carpark_monthly_energy = px.bar(
-                carpark_monthly_energy,
-                x="month",
-                y="energy_delivered",
-                text="energy_delivered",
-                hover_data={"transactions": True},
-                labels={
-                    "month": "Month",
-                    "energy_delivered": "Energy Delivered",
-                    "transactions": "Transactions"
-                },
+            fig_carpark_monthly_energy = px.bar(carpark_monthly_energy,x="month",y="energy_delivered",
+                text="energy_delivered",hover_data={"transactions": True},
+                labels={"month": "Month","energy_delivered": "Energy Delivered","transactions": "Transactions"},
                 template="plotly_white",
                 color_discrete_sequence=["#00A99D"]
             )
@@ -1171,16 +1037,8 @@ else:
                 yaxis_tickformat=",.0f"
             )
 
-            st.plotly_chart(
-                fig_carpark_monthly_energy,
-                use_container_width=True
-            )
-
-            st.dataframe(
-                carpark_monthly_energy,
-                use_container_width=True,
-                hide_index=True
-            )
+            st.plotly_chart(fig_carpark_monthly_energy,use_container_width=True)
+            st.dataframe(carpark_monthly_energy,use_container_width=True,hide_index=True)
 
         else:
             st.info("No monthly energy records found.")
@@ -1189,48 +1047,191 @@ else:
 
 
 # --------------------------------------------------
-# ENERGY BY CARPARK OWNER & MONTH
+# ENERGY BY CAR PARK OWNER
 # --------------------------------------------------
-st.subheader("Energy Delivered By Carpark Owner & Month")
+
+st.subheader("Energy Delivered By Carpark Owner")
 
 if date_col is None:
     st.warning("No supported date column was found.")
+
 elif filtered["report_date"].notna().sum() == 0:
     st.warning("No valid transaction dates are available.")
+
 elif filtered.empty:
     st.info("No transactions match the selected filters.")
+
 else:
-    monthly_owner_energy = (filtered.dropna(subset=["report_date"])
-        .groupby(["month", "car_park_owner"], as_index=False)
-        .agg(energy_delivered=("ci_power", "sum"),transactions=("ci_power", "count"))
-        .sort_values(["month", "car_park_owner"])
+
+    # -------------------------------------
+    # TOTAL ENERGY BY CAR PARK OWNER
+    # -------------------------------------
+
+    owner_energy = (
+        filtered.dropna(subset=["report_date"])
+        .groupby("car_park_owner", as_index=False)
+        .agg(
+            energy_delivered=("ci_power", "sum"),
+            transactions=("ci_power", "count")
+        )
+        .sort_values("energy_delivered", ascending=False)
     )
 
-    fig = px.bar(monthly_owner_energy,x="month",y="energy_delivered",
-        color="car_park_owner",barmode="group",
-        labels={"month": "Month","energy_delivered": "Energy Delivered",
-            "car_park_owner": "Car Park Owner","transactions": "Transactions"},
+    fig_owner_energy = px.bar(
+        owner_energy,
+        x="energy_delivered",
+        y="car_park_owner",
+        orientation="h",
+        text="energy_delivered",
+        hover_data={"transactions": True},
+        labels={
+            "car_park_owner": "Car Park Owner",
+            "energy_delivered": "Energy Delivered",
+            "transactions": "Transactions"
+        },
         template="plotly_white",
-        color_discrete_sequence=px.colors.qualitative.Safe
+        color_discrete_sequence=["#00A99D"]
     )
 
-    fig.update_traces(hovertemplate=("Month: %{x}<br>"
-            "Owner: %{fullData.name}<br>"
-            "Energy Delivered: %{y:,.0f} kWh<br>"
+    fig_owner_energy.update_traces(
+        texttemplate="%{text:,.0f} kWh",
+        textposition="outside",
+        cliponaxis=False,
+        hovertemplate=(
+            "Owner: %{y}<br>"
+            "Energy Delivered: %{x:,.2f} kWh<br>"
             "Transactions: %{customdata[0]}<br>"
             "<extra></extra>"
-        ),
-        customdata=monthly_owner_energy[["transactions"]].values,
-        texttemplate="%{y:,.0f} kWh"
+        )
     )
 
-    fig.update_layout(height=500,margin=dict(t=30, b=30, l=20, r=20),
-        xaxis_title="Month",yaxis_title="Total Energy Delivered",
-        yaxis_ticksuffix=" kWh",yaxis_tickformat=",.0f",legend_title="Carpark Owner",
-        legend=dict(orientation="h",yanchor="bottom",y=1.02,xanchor="left",x=0
-        ))
+    fig_owner_energy.update_layout(
+        height=600,
+        margin=dict(t=30, b=30, l=20, r=110),
+        xaxis_title="Total Energy Delivered (kWh)",
+        yaxis_title="Car Park Owner",
+        xaxis_ticksuffix=" kWh",
+        xaxis_tickformat=",.0f",
+        yaxis=dict(categoryorder="total ascending"),
+        showlegend=False
+    )
 
-    st.plotly_chart(fig, use_container_width=True)
+    # -------------------------------------
+    # CLICK TO SELECT / CLICK AGAIN TO HIDE
+    # -------------------------------------
+
+    def toggle_owner_energy_selection():
+
+        points = st.session_state[
+            "owner_energy_chart"
+        ].selection.points
+
+        if points:
+
+            clicked_owner = points[0]["y"]
+
+            current_owner = st.session_state.get(
+                "selected_energy_owner"
+            )
+
+            if current_owner == clicked_owner:
+                st.session_state["selected_energy_owner"] = None
+            else:
+                st.session_state["selected_energy_owner"] = clicked_owner
+
+        else:
+            st.session_state["selected_energy_owner"] = None
+
+    st.plotly_chart(
+        fig_owner_energy,
+        use_container_width=True,
+        key="owner_energy_chart",
+        on_select=toggle_owner_energy_selection,
+        selection_mode="points"
+    )
+
+    # -------------------------------------
+    # DISPLAY SELECTED OWNER BY MONTH
+    # -------------------------------------
+
+    selected_energy_owner = st.session_state.get(
+        "selected_energy_owner"
+    )
+
+    if selected_energy_owner is not None:
+
+        st.divider()
+
+        st.subheader(
+            f"Monthly Energy Breakdown - {selected_energy_owner}"
+        )
+
+        owner_monthly_energy = (
+            filtered[
+                filtered["car_park_owner"] == selected_energy_owner
+            ]
+            .dropna(subset=["report_date"])
+            .groupby("month", as_index=False)
+            .agg(
+                energy_delivered=("ci_power", "sum"),
+                transactions=("ci_power", "count")
+            )
+            .sort_values("month")
+        )
+
+        if not owner_monthly_energy.empty:
+
+            fig_owner_monthly_energy = px.bar(
+                owner_monthly_energy,
+                x="month",
+                y="energy_delivered",
+                text="energy_delivered",
+                hover_data={"transactions": True},
+                labels={
+                    "month": "Month",
+                    "energy_delivered": "Energy Delivered",
+                    "transactions": "Transactions"
+                },
+                template="plotly_white",
+                color_discrete_sequence=["#00A99D"]
+            )
+
+            fig_owner_monthly_energy.update_traces(
+                texttemplate="%{text:,.0f} kWh",
+                textposition="outside",
+                cliponaxis=False,
+                hovertemplate=(
+                    "Month: %{x}<br>"
+                    "Energy Delivered: %{y:,.2f} kWh<br>"
+                    "Transactions: %{customdata[0]}<br>"
+                    "<extra></extra>"
+                )
+            )
+
+            fig_owner_monthly_energy.update_layout(
+                height=450,
+                showlegend=False,
+                margin=dict(t=30, b=30, l=20, r=40),
+                xaxis_title="Month",
+                yaxis_title="Energy Delivered (kWh)",
+                yaxis_ticksuffix=" kWh",
+                yaxis_tickformat=",.0f"
+            )
+
+            st.plotly_chart(
+                fig_owner_monthly_energy,
+                use_container_width=True
+            )
+
+            st.dataframe(
+                owner_monthly_energy,
+                use_container_width=True,
+                hide_index=True
+            )
+
+        else:
+            st.info("No monthly energy records found.")
+
 
 
 # --------------------------------------------------
