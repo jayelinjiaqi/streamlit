@@ -611,47 +611,191 @@ else:
 
 
 
+
 # --------------------------------------------------
-# MONTHLY PAYMENT BY CARPARK OWNER & MONTH
+# PAYMENT BY CAR PARK OWNER
 # --------------------------------------------------
-st.subheader("Total Payment By Carpark Owner & Month")
+
+st.subheader("Total Payment By Carpark Owner")
 
 if date_col is None:
     st.warning("No supported date column was found.")
+
 elif filtered["report_date"].notna().sum() == 0:
     st.warning("No valid transaction dates are available.")
+
 elif filtered.empty:
     st.info("No transactions match the selected filters.")
 
 else:
-    monthly_owner = (
+
+    # -------------------------------------
+    # TOTAL PAYMENT BY CAR PARK OWNER
+    # -------------------------------------
+
+    owner_payment = (
         filtered.dropna(subset=["report_date"])
-        .groupby(["month", "car_park_owner"], as_index=False)
-        .agg(payment_amount=("payment_amount", "sum"),transactions=("payment_amount", "size"))
-        .sort_values(["month", "car_park_owner"])
+        .groupby("car_park_owner", as_index=False)
+        .agg(
+            payment_amount=("payment_amount", "sum"),
+            transactions=("payment_amount", "size")
+        )
+        .sort_values("payment_amount", ascending=False)
     )
 
-    fig = px.bar(monthly_owner,x="month",y="payment_amount",
-        color="car_park_owner",barmode="group",
+    fig_owner = px.bar(
+        owner_payment,
+        x="payment_amount",
+        y="car_park_owner",
+        orientation="h",
+        text="payment_amount",
         hover_data={"transactions": True},
-        labels={"month": "Month","payment_amount": "Payment Amount","car_park_owner": "Car Park Owner","transactions": "Transactions"},
+        labels={
+            "car_park_owner": "Car Park Owner",
+            "payment_amount": "Payment Amount",
+            "transactions": "Transactions"
+        },
         template="plotly_white",
-        color_discrete_sequence=px.colors.qualitative.Safe
+        color_discrete_sequence=["#00A99D"]
     )
 
-    fig.update_traces(
-        hovertemplate=("Month: %{x}<br>"
-            "Owner: %{fullData.name}<br>"
-            "Payments: $%{y:,.2f}<br>"
+    fig_owner.update_traces(
+        texttemplate="$%{text:,.2f}",
+        textposition="outside",
+        cliponaxis=False,
+        hovertemplate=(
+            "Owner: %{y}<br>"
+            "Payments: $%{x:,.2f}<br>"
+            "Transactions: %{customdata[0]}<br>"
             "<extra></extra>"
-        ))
+        )
+    )
 
-    fig.update_layout(height=500,margin=dict(t=30, b=30, l=20, r=20),
-        xaxis_title="Month",yaxis_title="Total Payment",
-        yaxis_tickprefix="$",yaxis_tickformat=",.2f",
-        legend_title="Car Park Owner",legend=dict(orientation="h",yanchor="bottom",y=1.02,xanchor="left",x=0))
+    fig_owner.update_layout(
+        height=600,
+        margin=dict(t=30, b=30, l=20, r=100),
+        xaxis_title="Total Payment",
+        yaxis_title="Car Park Owner",
+        xaxis_tickprefix="$",
+        xaxis_tickformat=",.2f",
+        yaxis=dict(categoryorder="total ascending"),
+        showlegend=False
+    )
 
-    st.plotly_chart(fig, use_container_width=True)
+    # -------------------------------------
+    # CLICK TO SELECT / CLICK AGAIN TO HIDE
+    # -------------------------------------
+
+    def toggle_owner_selection():
+        points = st.session_state[
+            "owner_payment_chart"
+        ].selection.points
+
+        if points:
+            clicked_owner = points[0]["y"]
+
+            current_owner = st.session_state.get(
+                "selected_owner"
+            )
+
+            if current_owner == clicked_owner:
+                st.session_state["selected_owner"] = None
+            else:
+                st.session_state["selected_owner"] = clicked_owner
+
+        else:
+            st.session_state["selected_owner"] = None
+
+    st.plotly_chart(
+        fig_owner,
+        use_container_width=True,
+        key="owner_payment_chart",
+        on_select=toggle_owner_selection,
+        selection_mode="points"
+    )
+
+    # -------------------------------------
+    # DISPLAY SELECTED OWNER BY MONTH
+    # -------------------------------------
+
+    selected_owner = st.session_state.get(
+        "selected_owner"
+    )
+
+    if selected_owner is not None:
+
+        st.divider()
+
+        st.subheader(
+            f"Monthly Payment Breakdown - {selected_owner}"
+        )
+
+        owner_monthly = (
+            filtered[
+                filtered["car_park_owner"] == selected_owner
+            ]
+            .dropna(subset=["report_date"])
+            .groupby("month", as_index=False)
+            .agg(
+                payment_amount=("payment_amount", "sum"),
+                transactions=("payment_amount", "size")
+            )
+            .sort_values("month")
+        )
+
+        if not owner_monthly.empty:
+
+            fig_owner_monthly = px.bar(
+                owner_monthly,
+                x="month",
+                y="payment_amount",
+                text="payment_amount",
+                hover_data={"transactions": True},
+                labels={
+                    "month": "Month",
+                    "payment_amount": "Payment Amount",
+                    "transactions": "Transactions"
+                },
+                template="plotly_white",
+                color_discrete_sequence=["#00A99D"]
+            )
+
+            fig_owner_monthly.update_traces(
+                texttemplate="$%{text:,.2f}",
+                textposition="outside",
+                cliponaxis=False,
+                hovertemplate=(
+                    "Month: %{x}<br>"
+                    "Payment: $%{y:,.2f}<br>"
+                    "Transactions: %{customdata[0]}<br>"
+                    "<extra></extra>"
+                )
+            )
+
+            fig_owner_monthly.update_layout(
+                height=450,
+                showlegend=False,
+                margin=dict(t=30, b=30, l=20, r=30),
+                xaxis_title="Month",
+                yaxis_title="Total Payment",
+                yaxis_tickprefix="$",
+                yaxis_tickformat=",.2f"
+            )
+
+            st.plotly_chart(
+                fig_owner_monthly,
+                use_container_width=True
+            )
+
+            st.dataframe(
+                owner_monthly,
+                use_container_width=True,
+                hide_index=True
+            )
+
+        else:
+            st.info("No monthly payment records found.")
+
 
 
 # --------------------------------------------------
