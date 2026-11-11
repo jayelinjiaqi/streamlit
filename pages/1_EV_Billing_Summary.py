@@ -309,6 +309,7 @@ st.divider()
 
 
 
+
 # --------------------------------------------------
 # MONTHLY PAYMENT CHART
 # --------------------------------------------------
@@ -339,11 +340,10 @@ else:
         x="month",
         y="payment_amount",
         text="payment_amount",
-        hover_data={"transactions": True},
+        custom_data=["transactions"],
         labels={
             "month": "Month",
             "payment_amount": "Payment Amount",
-            "transactions": "Transactions"
         },
         template="plotly_white",
         color_discrete_sequence=["#00A99D"]
@@ -356,6 +356,7 @@ else:
         hovertemplate=(
             "Month: %{x}<br>"
             "Payments: $%{y:,.2f}<br>"
+            "Transactions: %{customdata[0]}<br>"
             "<extra></extra>"
         )
     )
@@ -367,10 +368,11 @@ else:
         xaxis_title="Month",
         yaxis_title="Total Payment",
         yaxis_tickprefix="$",
-        yaxis_tickformat=",.0f"
+        yaxis_tickformat=",.0f",
+        clickmode="event+select"
     )
 
-    # Enable bar selection
+    # Capture bar click
     event = st.plotly_chart(
         fig,
         use_container_width=True,
@@ -379,14 +381,13 @@ else:
         key="monthly_payment_chart"
     )
 
-    # Handle clicked month
+    # Process selected bar
     if event and event.selection.points:
 
         selected_month = str(
             event.selection.points[0]["x"]
         )
 
-        # Filter records for the selected month
         selected_data = filtered[
             filtered["month"].astype(str) == selected_month
         ].copy()
@@ -397,10 +398,10 @@ else:
 
             st.session_state["payment_detail_data"] = selected_data
 
-            # Navigate to registered page
             st.switch_page(
                 "pages/2_Monthly_Payment_Details.py"
             )
+
 
 # --------------------------------------------------
 # MONTHLY PAYMENT BY CAR PARK NAME & MONTH
