@@ -311,6 +311,7 @@ st.divider()
 
 
 
+
 # --------------------------------------------------
 # MONTHLY PAYMENT CHART
 # --------------------------------------------------
@@ -374,9 +375,6 @@ else:
         clickmode="event+select"
     )
 
-    # ----------------------------------------------
-    # CAPTURE SELECTED BAR
-    # ----------------------------------------------
     event = st.plotly_chart(
         fig,
         use_container_width=True,
@@ -386,8 +384,9 @@ else:
     )
 
     # ----------------------------------------------
-    # NAVIGATE TO PAYMENT DETAILS
+    # DISPLAY SELECTED MONTH BREAKDOWN
     # ----------------------------------------------
+
     selected_points = event.selection.points
 
     if selected_points:
@@ -396,27 +395,103 @@ else:
             selected_points[0]["x"]
         )
 
-        # Save selected month
-        st.session_state["selected_payment_month"] = (
-            selected_month
+        st.session_state["selected_payment_month"] = selected_month
+
+    selected_month = st.session_state.get(
+        "selected_payment_month"
+    )
+
+    if selected_month:
+
+        st.divider()
+
+        st.subheader(
+            f"Payment Breakdown By Car Park - {selected_month}"
         )
 
-        # Retrieve all filtered transactions for that month
         selected_data = filtered[
             filtered["month"].astype(str) == selected_month
         ].copy()
 
-        # Save transaction data
-        st.session_state["payment_detail_data"] = (
-            selected_data
-        )
-
-        # Navigate to details page
         if not selected_data.empty:
 
-            st.switch_page(
-                "pages/2_Monthly_Payment_Details.py"
+            carpark_breakdown = (
+                selected_data
+                .groupby("car_park_name", as_index=False)
+                .agg(
+                    payment_amount=("payment_amount", "sum"),
+                    transactions=("payment_amount", "size")
+                )
+                .sort_values(
+                    "payment_amount",
+                    ascending=False
+                )
             )
+
+            fig_detail = px.bar(
+                carpark_breakdown,
+                x="car_park_name",
+                y="payment_amount",
+                text="payment_amount",
+                hover_data={"transactions": True},
+                labels={
+                    "car_park_name": "Car Park Name",
+                    "payment_amount": "Total Payment",
+                    "transactions": "Transactions"
+                },
+                template="plotly_white",
+                color_discrete_sequence=["#123047"]
+            )
+
+            fig_detail.update_traces(
+                texttemplate="$%{text:,.2f}",
+                textposition="outside",
+                cliponaxis=False,
+                hovertemplate=(
+                    "Car Park: %{x}<br>"
+                    "Payment: $%{y:,.2f}<br>"
+                    "Transactions: %{customdata[0]}<br>"
+                    "<extra></extra>"
+                )
+            )
+
+            fig_detail.update_layout(
+                height=450,
+                showlegend=False,
+                xaxis_title="Car Park",
+                yaxis_title="Total Payment",
+                yaxis_tickprefix="$",
+                yaxis_tickformat=",.2f"
+            )
+
+            st.plotly_chart(
+                fig_detail,
+                use_container_width=True,
+                key="selected_month_carpark_chart"
+            )
+
+            st.dataframe(
+                carpark_breakdown.rename(
+                    columns={
+                        "car_park_name": "Car Park Name",
+                        "payment_amount": "Total Payment",
+                        "transactions": "Transactions"
+                    }
+                ).style.format({
+                    "Total Payment": "${:,.2f}"
+                }),
+                use_container_width=True,
+                hide_index=True
+            )
+
+            if st.button("Clear selected month"):
+                st.session_state.pop(
+                    "selected_payment_month", None
+                )
+                st.rerun()
+
+        else:
+            st.info("No payment records found for this month.")
 
 
 
