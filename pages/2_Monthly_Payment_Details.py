@@ -1,16 +1,22 @@
+
+import os
 import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-st.set_page_config(
-    page_title="Monthly Payment Details",
-    layout="wide"
-)
-
 # --------------------------------------------------
 # LOGO
 # --------------------------------------------------
-st.logo("assets/goparkin_logo.png", size="large")
+BASE_DIR = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..")
+)
+
+LOGO_PATH = os.path.join(
+    BASE_DIR, "assets", "goparkin_logo.png"
+)
+
+if os.path.exists(LOGO_PATH):
+    st.logo(LOGO_PATH, size="large")
 
 # --------------------------------------------------
 # GET SELECTED MONTH
@@ -28,7 +34,9 @@ if selected_month is None or detail_data is None:
     st.warning("Please select a month from the dashboard.")
 
     if st.button("← Back to Dashboard"):
-        st.switch_page("pages/1_EV_Billing_Summary.py")
+        st.switch_page(
+            "pages/1_EV_Billing_Summary.py"
+        )
 
     st.stop()
 
@@ -37,8 +45,9 @@ if selected_month is None or detail_data is None:
 # --------------------------------------------------
 monthly_data = detail_data.copy()
 
-# Ensure consistent month format
-monthly_data["month"] = monthly_data["month"].astype(str)
+monthly_data["month"] = (
+    monthly_data["month"].astype(str)
+)
 
 monthly_data = monthly_data[
     monthly_data["month"] == str(selected_month)
@@ -51,127 +60,11 @@ st.subheader(
 )
 
 if monthly_data.empty:
-
-    st.warning(
-        f"No payment records found for {selected_month}."
-    )
+    st.warning("No payment records found.")
 
     if st.button("← Back to Dashboard"):
-        st.switch_page("pages/1_EV_Billing_Summary.py")
+        st.switch_page(
+            "pages/1_EV_Billing_Summary.py"
+        )
 
     st.stop()
-
-# --------------------------------------------------
-# KPI SUMMARY
-# --------------------------------------------------
-total_payment = monthly_data["payment_amount"].sum()
-
-transaction_count = len(monthly_data)
-
-carpark_count = monthly_data["car_park_id"].nunique()
-
-k1, k2, k3 = st.columns(3)
-
-k1.metric(
-    "Total Payments",
-    f"${total_payment:,.2f}"
-)
-
-k2.metric(
-    "Transactions",
-    f"{transaction_count:,}"
-)
-
-k3.metric(
-    "Car Parks",
-    f"{carpark_count:,}"
-)
-
-st.divider()
-
-# --------------------------------------------------
-# PAYMENT BREAKDOWN BY CAR PARK
-# --------------------------------------------------
-st.subheader("Total Payment By Car Park")
-
-carpark_payment = (
-    monthly_data
-    .groupby("car_park_name", as_index=False)
-    .agg(
-        payment_amount=("payment_amount", "sum"),
-        transactions=("payment_amount", "size")
-    )
-    .sort_values(
-        "payment_amount",
-        ascending=False
-    )
-)
-
-fig = px.bar(
-    carpark_payment,
-    x="car_park_name",
-    y="payment_amount",
-    text="payment_amount",
-    hover_data={"transactions": True},
-    labels={
-        "car_park_name": "Car Park",
-        "payment_amount": "Total Payment",
-        "transactions": "Transactions"
-    },
-    template="plotly_white",
-    color_discrete_sequence=["#00A99D"]
-)
-
-fig.update_traces(
-    texttemplate="$%{text:,.2f}",
-    textposition="outside",
-    cliponaxis=False
-)
-
-fig.update_layout(
-    height=500,
-    showlegend=False,
-    xaxis_title="Car Park",
-    yaxis_title="Total Payment",
-    yaxis_tickprefix="$",
-    yaxis_tickformat=",.2f"
-)
-
-st.plotly_chart(
-    fig,
-    use_container_width=True
-)
-
-st.divider()
-
-# --------------------------------------------------
-# PAYMENT DETAIL TABLE
-# --------------------------------------------------
-st.subheader("Car Park Payment Summary")
-
-display_data = carpark_payment.rename(
-    columns={
-        "car_park_name": "Car Park Name",
-        "payment_amount": "Total Payment",
-        "transactions": "Transactions"
-    }
-)
-
-st.dataframe(
-    display_data.style.format({
-        "Total Payment": "${:,.2f}"
-    }),
-    use_container_width=True,
-    hide_index=True
-)
-
-st.divider()
-
-# --------------------------------------------------
-# BACK TO DASHBOARD
-# --------------------------------------------------
-if st.button("← Back to Dashboard"):
-
-    st.switch_page(
-        "pages/1_EV_Billing_Summary.py"
-    )
