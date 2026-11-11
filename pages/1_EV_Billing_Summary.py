@@ -799,46 +799,189 @@ else:
 
 
 # --------------------------------------------------
-# MONTHLY PAYMENT BY CARPARK OPERATOR & MONTH
+# PAYMENT BY CAR PARK OPERATOR
 # --------------------------------------------------
-st.subheader("Total Payment By Carpark Operator & Month")
+
+st.subheader("Total Payment By Carpark Operator")
 
 if date_col is None:
     st.warning("No supported date column was found.")
+
 elif filtered["report_date"].notna().sum() == 0:
     st.warning("No valid transaction dates are available.")
+
 elif filtered.empty:
     st.info("No transactions match the selected filters.")
 
 else:
-    monthly_operator = (
+
+    # -------------------------------------
+    # TOTAL PAYMENT BY CAR PARK OPERATOR
+    # -------------------------------------
+
+    operator_payment = (
         filtered.dropna(subset=["report_date"])
-        .groupby(["month", "car_park_operator"], as_index=False)
-        .agg(payment_amount=("payment_amount", "sum"),transactions=("payment_amount", "size"))
-        .sort_values(["month", "car_park_operator"])
+        .groupby("car_park_operator", as_index=False)
+        .agg(
+            payment_amount=("payment_amount", "sum"),
+            transactions=("payment_amount", "size")
+        )
+        .sort_values("payment_amount", ascending=False)
     )
 
-    fig = px.bar(monthly_operator,x="month",y="payment_amount",
-        color="car_park_operator",barmode="group",
+    fig_operator = px.bar(
+        operator_payment,
+        x="payment_amount",
+        y="car_park_operator",
+        orientation="h",
+        text="payment_amount",
         hover_data={"transactions": True},
-        labels={"month": "Month","payment_amount": "Payment Amount","car_park_operator": "Car Park Operator",
-            "transactions": "Transactions"},
+        labels={
+            "car_park_operator": "Car Park Operator",
+            "payment_amount": "Payment Amount",
+            "transactions": "Transactions"
+        },
         template="plotly_white",
-        color_discrete_sequence=px.colors.qualitative.Safe
+        color_discrete_sequence=["#00A99D"]
     )
 
-    fig.update_traces(hovertemplate=("Month: %{x}<br>"
-            "Operator: %{fullData.name}<br>"
-            "Payments: $%{y:,.2f}<br>"
+    fig_operator.update_traces(
+        texttemplate="$%{text:,.2f}",
+        textposition="outside",
+        cliponaxis=False,
+        hovertemplate=(
+            "Operator: %{y}<br>"
+            "Payments: $%{x:,.2f}<br>"
+            "Transactions: %{customdata[0]}<br>"
             "<extra></extra>"
-        ))
+        )
+    )
 
-    fig.update_layout(height=500,margin=dict(t=30, b=30, l=20, r=20),
-        xaxis_title="Month",yaxis_title="Total Payment",yaxis_tickprefix="$",yaxis_tickformat=",.2f",
-        legend_title="Carpark Operator",
-        legend=dict(orientation="h",yanchor="bottom",y=1.02,xanchor="left",x=0))
+    fig_operator.update_layout(
+        height=600,
+        margin=dict(t=30, b=30, l=20, r=100),
+        xaxis_title="Total Payment",
+        yaxis_title="Car Park Operator",
+        xaxis_tickprefix="$",
+        xaxis_tickformat=",.2f",
+        yaxis=dict(categoryorder="total ascending"),
+        showlegend=False
+    )
 
-    st.plotly_chart(fig, use_container_width=True)
+    # -------------------------------------
+    # CLICK TO SELECT / CLICK AGAIN TO HIDE
+    # -------------------------------------
+
+    def toggle_operator_selection():
+        points = st.session_state[
+            "operator_payment_chart"
+        ].selection.points
+
+        if points:
+            clicked_operator = points[0]["y"]
+
+            current_operator = st.session_state.get(
+                "selected_operator"
+            )
+
+            if current_operator == clicked_operator:
+                st.session_state["selected_operator"] = None
+            else:
+                st.session_state["selected_operator"] = clicked_operator
+
+        else:
+            st.session_state["selected_operator"] = None
+
+    st.plotly_chart(
+        fig_operator,
+        use_container_width=True,
+        key="operator_payment_chart",
+        on_select=toggle_operator_selection,
+        selection_mode="points"
+    )
+
+    # -------------------------------------
+    # DISPLAY SELECTED OPERATOR BY MONTH
+    # -------------------------------------
+
+    selected_operator = st.session_state.get(
+        "selected_operator"
+    )
+
+    if selected_operator is not None:
+
+        st.divider()
+
+        st.subheader(
+            f"Monthly Payment Breakdown - {selected_operator}"
+        )
+
+        operator_monthly = (
+            filtered[
+                filtered["car_park_operator"] == selected_operator
+            ]
+            .dropna(subset=["report_date"])
+            .groupby("month", as_index=False)
+            .agg(
+                payment_amount=("payment_amount", "sum"),
+                transactions=("payment_amount", "size")
+            )
+            .sort_values("month")
+        )
+
+        if not operator_monthly.empty:
+
+            fig_operator_monthly = px.bar(
+                operator_monthly,
+                x="month",
+                y="payment_amount",
+                text="payment_amount",
+                hover_data={"transactions": True},
+                labels={
+                    "month": "Month",
+                    "payment_amount": "Payment Amount",
+                    "transactions": "Transactions"
+                },
+                template="plotly_white",
+                color_discrete_sequence=["#00A99D"]
+            )
+
+            fig_operator_monthly.update_traces(
+                texttemplate="$%{text:,.2f}",
+                textposition="outside",
+                cliponaxis=False,
+                hovertemplate=(
+                    "Month: %{x}<br>"
+                    "Payment: $%{y:,.2f}<br>"
+                    "Transactions: %{customdata[0]}<br>"
+                    "<extra></extra>"
+                )
+            )
+
+            fig_operator_monthly.update_layout(
+                height=450,
+                showlegend=False,
+                margin=dict(t=30, b=30, l=20, r=30),
+                xaxis_title="Month",
+                yaxis_title="Total Payment",
+                yaxis_tickprefix="$",
+                yaxis_tickformat=",.2f"
+            )
+
+            st.plotly_chart(
+                fig_operator_monthly,
+                use_container_width=True
+            )
+
+            st.dataframe(
+                operator_monthly,
+                use_container_width=True,
+                hide_index=True
+            )
+
+        else:
+            st.info("No monthly payment records found.")
+
 
 
 # --------------------------------------------------
