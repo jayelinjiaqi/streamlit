@@ -1,73 +1,177 @@
+
 from shared_data import get_filtered_data
 import streamlit as st
 import pandas as pd
 import plotly.express as px
 
 # --------------------------------------------------
-# PAGE: BY CARPARK
+# PAGE CONFIGURATION
 # --------------------------------------------------
+
 st.title("EV Billing Summary By Carpark")
 
-# Get shared data from app.py
 filtered, date_col = get_filtered_data()
 
+CHART_COLOR = "#00A99D"
 
 
 # --------------------------------------------------
-# PAYMENT BY CAR PARK NAME
+# COMMON CHART SETTINGS
 # --------------------------------------------------
-st.subheader("Total Payment By Carpark")
+
+def get_chart_limit(data, key):
+
+    options = {
+        "Top 10": 10,
+        "Top 20": 20,
+        "Top 30": 30,
+        "Top 50": 50,
+        "All": len(data)
+    }
+
+    col1, col2 = st.columns([2, 3])
+
+    with col1:
+        limit_choice = st.selectbox(
+            "Number of car parks to display",
+            list(options.keys()),
+            index=1,
+            key=f"{key}_limit"
+        )
+
+    with col2:
+        search = st.text_input(
+            "Search car park",
+            placeholder="Enter car park name...",
+            key=f"{key}_search"
+        )
+
+    result = data.copy()
+
+    # Search filter
+    if search.strip():
+        result = result[
+            result["car_park_name"].str.contains(
+                search.strip(),
+                case=False,
+                na=False
+            )
+        ]
+
+    # Top N filter
+    limit = options[limit_choice]
+
+    if limit_choice != "All" and not search.strip():
+        result = result.head(limit)
+
+    return result
+
+
+def get_chart_height(number_of_rows):
+
+    # Dynamically increase chart height
+    return max(450, min(number_of_rows * 35 + 100, 1600))
+
+
+# --------------------------------------------------
+# CHECK DATA
+# --------------------------------------------------
+
+if filtered.empty:
+    st.warning("No transactions match the selected filters.")
+    st.stop()
+
 if date_col is None:
     st.warning("No supported date column was found.")
-elif filtered.empty or filtered["report_date"].notna().sum() == 0:
-    st.info("No valid transactions match the selected filters.")
+    st.stop()
+
+if filtered["report_date"].notna().sum() == 0:
+    st.warning("No valid transaction dates are available.")
+    st.stop()
+
+
+# Make car park names consistent
+filtered = filtered.copy()
+
+filtered["car_park_name"] = (
+    filtered["car_park_name"]
+    .fillna("Unknown")
+    .astype(str)
+)
+
+
+# ==================================================
+# 1. PAYMENT BY CAR PARK
+# ==================================================
+
+st.divider()
+st.subheader("Total Payment By Carpark")
+
+carpark_payment = (
+    filtered.dropna(subset=["report_date"])
+    .groupby("car_park_name", as_index=False)
+    .agg(
+        payment_amount=("payment_amount", "sum"),
+        transactions=("payment_amount", "size")
+    )
+    .sort_values("payment_amount", ascending=False)
+)
+
+# Search and Top N
+payment_display = get_chart_limit(
+    carpark_payment,
+    "payment"
+)
+
+if payment_display.empty:
+
+    st.info("No matching car parks found.")
+
 else:
-    carpark_payment = (
-        filtered.dropna(subset=["report_date"])
-        .groupby("car_park_name", as_index=False)
-        .agg(payment_amount=("payment_amount", "sum"),
-            transactions=("payment_amount", "size")
-        )
-        .sort_values("payment_amount", ascending=False)
+
+    st.caption(
+        f"Displaying {len(payment_display):,} of "
+        f"{len(carpark_payment):,} car parks."
     )
 
     fig_payment = px.bar(
-        carpark_payment,
+        payment_display,
         x="payment_amount",
         y="car_park_name",
         orientation="h",
-        text="payment_amount",
-        hover_data={"transactions": True},
+        custom_data=["transactions"],
         labels={
             "car_park_name": "Car Park Name",
-            "payment_amount": "Payment Amount",
-            "transactions": "Transactions"
+            "payment_amount": "Payment Amount"
         },
         template="plotly_white",
-        color_discrete_sequence=["#00A99D"]
+        color_discrete_sequence=[CHART_COLOR]
     )
 
     fig_payment.update_traces(
-        texttemplate="$%{text:,.2f}",
-        textposition="outside",
-        cliponaxis=False,
+        texttemplate=None,
         hovertemplate=(
-            "Car Park: %{y}<br>"
+            "<b>%{y}</b><br>"
             "Payment: $%{x:,.2f}<br>"
-            "Transactions: %{customdata[0]}<br>"
+            "Transactions: %{customdata[0]:,}"
             "<extra></extra>"
         )
     )
 
     fig_payment.update_layout(
-        height=600,
-        margin=dict(t=30, b=30, l=20, r=100),
-        xaxis_title="Total Payment",
+        height=get_chart_height(len(payment_display)),
+        margin=dict(t=30, b=40, l=20, r=40),
+        xaxis_title="Total Payment ($)",
         yaxis_title="Car Park Name",
         xaxis_tickprefix="$",
-        xaxis_tickformat=",.2f",
-        yaxis=dict(categoryorder="total ascending"),
-        showlegend=False
+        xaxis_tickformat=",.0f",
+        yaxis=dict(
+            categoryorder="total ascending",
+            automargin=True
+        ),
+        showlegend=False,
+        bargap=0.25,
+        font=dict(size=12)
     )
 
     event = st.plotly_chart(
@@ -78,10 +182,14 @@ else:
         selection_mode="points"
     )
 
-    # Get selected car park
+    # ----------------------------------------------
+    # SELECT CAR PARK
+    # ----------------------------------------------
+
     selected_points = event.selection.points
 
     if selected_points:
+
         clicked_carpark = selected_points[0]["y"]
 
         current_carpark = st.session_state.get(
@@ -93,9 +201,14 @@ else:
         else:
             st.session_state["selected_carpark"] = clicked_carpark
 
-    selected_carpark = st.session_state.get("selected_carpark")
+    selected_carpark = st.session_state.get(
+        "selected_carpark"
+    )
 
-    # Monthly payment breakdown
+    # ----------------------------------------------
+    # MONTHLY PAYMENT BREAKDOWN
+    # ----------------------------------------------
+
     if selected_carpark is not None:
 
         st.divider()
@@ -123,25 +236,27 @@ else:
                 carpark_monthly,
                 x="month",
                 y="payment_amount",
-                text="payment_amount",
-                hover_data={"transactions": True},
+                custom_data=["transactions"],
                 template="plotly_white",
-                color_discrete_sequence=["#00A99D"]
+                color_discrete_sequence=[CHART_COLOR]
             )
 
             fig_monthly.update_traces(
-                texttemplate="$%{text:,.2f}",
-                textposition="outside",
-                cliponaxis=False
+                hovertemplate=(
+                    "Month: %{x}<br>"
+                    "Payment: $%{y:,.2f}<br>"
+                    "Transactions: %{customdata[0]:,}"
+                    "<extra></extra>"
+                )
             )
 
             fig_monthly.update_layout(
                 height=450,
                 showlegend=False,
                 xaxis_title="Month",
-                yaxis_title="Total Payment",
+                yaxis_title="Total Payment ($)",
                 yaxis_tickprefix="$",
-                yaxis_tickformat=",.2f"
+                yaxis_tickformat=",.0f"
             )
 
             st.plotly_chart(
@@ -159,68 +274,77 @@ else:
             st.info("No monthly payment records found.")
 
 
-# --------------------------------------------------
-# ENERGY BY CAR PARK
-# --------------------------------------------------
+# ==================================================
+# 2. ENERGY BY CAR PARK
+# ==================================================
 
 st.divider()
 st.subheader("Energy Delivered By Carpark")
 
-if date_col is None:
-    st.warning("No supported date column was found.")
+carpark_energy = (
+    filtered.dropna(subset=["report_date"])
+    .groupby("car_park_name", as_index=False)
+    .agg(
+        energy_delivered=("ci_power", "sum"),
+        transactions=("ci_power", "count")
+    )
+    .sort_values("energy_delivered", ascending=False)
+)
 
-elif filtered.empty or filtered["report_date"].notna().sum() == 0:
-    st.info("No valid transactions match the selected filters.")
+# Search and Top N
+energy_display = get_chart_limit(
+    carpark_energy,
+    "energy"
+)
+
+if energy_display.empty:
+
+    st.info("No matching car parks found.")
 
 else:
 
-    carpark_energy = (
-        filtered.dropna(subset=["report_date"])
-        .groupby("car_park_name", as_index=False)
-        .agg(
-            energy_delivered=("ci_power", "sum"),
-            transactions=("ci_power", "count")
-        )
-        .sort_values("energy_delivered", ascending=False)
+    st.caption(
+        f"Displaying {len(energy_display):,} of "
+        f"{len(carpark_energy):,} car parks."
     )
 
     fig_energy = px.bar(
-        carpark_energy,
+        energy_display,
         x="energy_delivered",
         y="car_park_name",
         orientation="h",
-        text="energy_delivered",
-        hover_data={"transactions": True},
+        custom_data=["transactions"],
         labels={
             "car_park_name": "Car Park Name",
-            "energy_delivered": "Energy Delivered",
-            "transactions": "Transactions"
+            "energy_delivered": "Energy Delivered"
         },
         template="plotly_white",
-        color_discrete_sequence=["#00A99D"]
+        color_discrete_sequence=[CHART_COLOR]
     )
 
     fig_energy.update_traces(
-        texttemplate="%{text:,.0f} kWh",
-        textposition="outside",
-        cliponaxis=False,
         hovertemplate=(
-            "Car Park: %{y}<br>"
+            "<b>%{y}</b><br>"
             "Energy: %{x:,.2f} kWh<br>"
-            "Transactions: %{customdata[0]}<br>"
+            "Transactions: %{customdata[0]:,}"
             "<extra></extra>"
         )
     )
 
     fig_energy.update_layout(
-        height=600,
-        margin=dict(t=30, b=30, l=20, r=110),
+        height=get_chart_height(len(energy_display)),
+        margin=dict(t=30, b=40, l=20, r=50),
         xaxis_title="Total Energy Delivered (kWh)",
         yaxis_title="Car Park Name",
         xaxis_ticksuffix=" kWh",
         xaxis_tickformat=",.0f",
-        yaxis=dict(categoryorder="total ascending"),
-        showlegend=False
+        yaxis=dict(
+            categoryorder="total ascending",
+            automargin=True
+        ),
+        showlegend=False,
+        bargap=0.25,
+        font=dict(size=12)
     )
 
     event_energy = st.plotly_chart(
@@ -231,7 +355,10 @@ else:
         selection_mode="points"
     )
 
-    # Get selected car park
+    # ----------------------------------------------
+    # SELECT CAR PARK
+    # ----------------------------------------------
+
     selected_points = event_energy.selection.points
 
     if selected_points:
@@ -251,7 +378,10 @@ else:
         "selected_energy_carpark"
     )
 
-    # Monthly energy breakdown
+    # ----------------------------------------------
+    # MONTHLY ENERGY BREAKDOWN
+    # ----------------------------------------------
+
     if selected_energy_carpark is not None:
 
         st.divider()
@@ -279,16 +409,18 @@ else:
                 carpark_monthly_energy,
                 x="month",
                 y="energy_delivered",
-                text="energy_delivered",
-                hover_data={"transactions": True},
+                custom_data=["transactions"],
                 template="plotly_white",
-                color_discrete_sequence=["#00A99D"]
+                color_discrete_sequence=[CHART_COLOR]
             )
 
             fig_energy_monthly.update_traces(
-                texttemplate="%{text:,.0f} kWh",
-                textposition="outside",
-                cliponaxis=False
+                hovertemplate=(
+                    "Month: %{x}<br>"
+                    "Energy: %{y:,.2f} kWh<br>"
+                    "Transactions: %{customdata[0]:,}"
+                    "<extra></extra>"
+                )
             )
 
             fig_energy_monthly.update_layout(
