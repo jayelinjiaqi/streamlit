@@ -17,7 +17,7 @@ dashboard_page = st.Page(
 )
 
 carpark_page = st.Page(
-    os.path.join(BASE_DIR, "pages", "3_By_Carpark.py"),
+    os.path.join(BASE_DIR, "pages", "2_By_Carpark.py"),
     title="By Carpark"
 )
 
