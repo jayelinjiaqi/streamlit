@@ -5,7 +5,7 @@ import os
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 st.set_page_config(
-    page_title="EV Payments Dashboard",
+    page_title="GoParkin | EV Billing Summary",
     layout="wide",
     initial_sidebar_state="expanded"
 )
