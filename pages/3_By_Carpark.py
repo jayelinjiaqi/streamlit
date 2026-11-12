@@ -12,63 +12,61 @@ filtered, date_col = get_filtered_data()
 CHART_COLOR = "#00A99D"
 
 # --------------------------------------------------
-# COMMON CHART SETTINGS
+# SHARED CAR PARK FILTERS
 # --------------------------------------------------
-def get_chart_limit(data, key):
-    options = {
-        "Top 10": 10,
-        "Top 20": 20,
-        "Top 30": 30,
-        "Top 50": 50,
-        "All": len(data)
-    }
 
-    col1, col2 = st.columns([2, 3])
+st.subheader("Car Park Filters")
 
-    with col1:
-        limit_choice = st.selectbox(
-            "Number of car parks to display",
-            list(options.keys()),
-            index=1,
-            key=f"{key}_limit"
-        )
+col1, col2 = st.columns([1, 2])
 
-    with col2:
+with col1:
+    limit_choice = st.selectbox(
+        "Number of car parks",
+        ["Top 10", "Top 20", "Top 30", "Top 50", "All"],
+        index=1,
+        key="shared_carpark_limit"
+    )
 
-        # Searchable dropdown with suggestions
-        selected_carpark = st.selectbox(
-            "Search car park",
-            options=["All Car Parks"] + sorted(
-                data["car_park_name"].dropna().unique().tolist()
-            ),
-            index=0,
-            key=f"{key}_search",
-            placeholder="Type car park name...",
-        )
+with col2:
+    all_carparks = sorted(
+        filtered["car_park_name"].dropna().unique().tolist()
+    )
 
-    result = data.copy()
-
-    # If a specific car park is selected
-    if selected_carpark != "All Car Parks":
-
-        result = result[
-            result["car_park_name"] == selected_carpark
-        ]
-
-    else:
-
-        # Apply Top N only when showing all car parks
-        limit = options[limit_choice]
-
-        if limit_choice != "All":
-            result = result.head(limit)
-
-    return result
+    selected_carpark_search = st.selectbox(
+        "Search car park",
+        options=["All Car Parks"] + all_carparks,
+        index=0,
+        key="shared_carpark_search",
+        placeholder="Type car park name..."
+    )
 
 
+# --------------------------------------------------
+# APPLY SHARED FILTERS
+# --------------------------------------------------
+
+limit_options = {
+    "Top 10": 10,
+    "Top 20": 20,
+    "Top 30": 30,
+    "Top 50": 50,
+    "All": len(all_carparks)
+}
+
+# Filter based on selected car park
+if selected_carpark_search != "All Car Parks":
+    payment_display = get_chart_limit(carpark_payment,"payment")
+    energy_display = get_chart_limit(carpark_energy,"energy")
+else:
+    limit = limit_options[limit_choice]
+    payment_display = carpark_payment.head(limit).copy()
+    energy_display = carpark_energy.head(limit).copy()
+st.caption(
+    f"Showing {len(payment_display)} car parks "
+    "in each chart."
+)
 
 def get_chart_height(number_of_rows):
-
     # Dynamically increase chart height
     return max(450, min(number_of_rows * 35 + 100, 1600))
 
@@ -86,7 +84,6 @@ if filtered["report_date"].notna().sum() == 0:
     st.warning("No valid transaction dates are available.")
     st.stop()
 
-
 # Make car park names consistent
 filtered = filtered.copy()
 
@@ -95,7 +92,6 @@ filtered["car_park_name"] = (
     .fillna("Unknown")
     .astype(str)
 )
-
 
 # ==================================================
 # 1. PAYMENT BY CAR PARK
