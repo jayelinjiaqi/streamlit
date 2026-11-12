@@ -1,4 +1,4 @@
-
+from shared_data import get_filtered_data
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -6,32 +6,26 @@ import plotly.express as px
 # --------------------------------------------------
 # PAGE: BY CARPARK
 # --------------------------------------------------
-
-st.title("EV | By Carpark")
+st.title("EV Billing Summary By Carpark")
 
 # Get shared data from app.py
-filtered = st.session_state["filtered"]
-date_col = st.session_state["date_col"]
+filtered, date_col = get_filtered_data()
+
+
 
 # --------------------------------------------------
 # PAYMENT BY CAR PARK NAME
 # --------------------------------------------------
-
 st.subheader("Total Payment By Carpark")
-
 if date_col is None:
     st.warning("No supported date column was found.")
-
 elif filtered.empty or filtered["report_date"].notna().sum() == 0:
     st.info("No valid transactions match the selected filters.")
-
 else:
-
     carpark_payment = (
         filtered.dropna(subset=["report_date"])
         .groupby("car_park_name", as_index=False)
-        .agg(
-            payment_amount=("payment_amount", "sum"),
+        .agg(payment_amount=("payment_amount", "sum"),
             transactions=("payment_amount", "size")
         )
         .sort_values("payment_amount", ascending=False)
