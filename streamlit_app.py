@@ -18,24 +18,23 @@ dashboard_page = st.Page(
 
 carpark_page = st.Page(
     os.path.join(BASE_DIR, "pages", "3_By_Carpark.py"),
-    title="EV Billing Summary by Carpark"
+    title="By Carpark"
 )
 
 operator_page = st.Page(
     os.path.join(BASE_DIR, "pages", "3_By_Operator.py"),
-    title="EV Billing Summary by Operator"
+    title="By Operator"
 )
 
 owner_page = st.Page(
     os.path.join(BASE_DIR, "pages", "4_By_Owner.py"),
-    title="EV Billing Summary by Owner"
+    title="By Owner"
 )
 
-monthly_details_page = st.Page(
-    os.path.join(BASE_DIR, "pages", "2_Monthly_Payment_Details.py"),
-    title="Monthly Payment Details"
-)
-
+#monthly_details_page = st.Page(
+#    os.path.join(BASE_DIR, "pages", "2_Monthly_Payment_Details.py"),
+#    title="Monthly Payment Details"
+#)
 
 pg = st.navigation([
     dashboard_page,
