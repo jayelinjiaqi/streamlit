@@ -38,7 +38,6 @@ owner_page = st.Page(
 
 pg = st.navigation([
     dashboard_page,
-    monthly_details_page,
     carpark_page,
     operator_page,
     owner_page
