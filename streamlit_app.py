@@ -15,6 +15,12 @@ dashboard_page = st.Page(
     default=True
 )
 
+carpark_page = st.Page(
+    os.path.join(BASE_DIR, "pages", "3_By_Carpark.py"),
+    title="EV Billing Summary by Carpark",
+    default=True
+)
+
 monthly_details_page = st.Page(
     os.path.join(BASE_DIR, "pages", "2_Monthly_Payment_Details.py"),
     title="Monthly Payment Details"
