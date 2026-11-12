@@ -7,20 +7,14 @@ import plotly.express as px
 # --------------------------------------------------
 # PAGE CONFIGURATION
 # --------------------------------------------------
-
 st.title("EV Billing Summary By Carpark")
-
 filtered, date_col = get_filtered_data()
-
 CHART_COLOR = "#00A99D"
-
 
 # --------------------------------------------------
 # COMMON CHART SETTINGS
 # --------------------------------------------------
-
 def get_chart_limit(data, key):
-
     options = {
         "Top 10": 10,
         "Top 20": 20,
@@ -40,31 +34,37 @@ def get_chart_limit(data, key):
         )
 
     with col2:
-        search = st.text_input(
+
+        # Searchable dropdown with suggestions
+        selected_carpark = st.selectbox(
             "Search car park",
-            placeholder="Enter car park name...",
-            key=f"{key}_search"
+            options=["All Car Parks"] + sorted(
+                data["car_park_name"].dropna().unique().tolist()
+            ),
+            index=0,
+            key=f"{key}_search",
+            placeholder="Type car park name...",
         )
 
     result = data.copy()
 
-    # Search filter
-    if search.strip():
+    # If a specific car park is selected
+    if selected_carpark != "All Car Parks":
+
         result = result[
-            result["car_park_name"].str.contains(
-                search.strip(),
-                case=False,
-                na=False
-            )
+            result["car_park_name"] == selected_carpark
         ]
 
-    # Top N filter
-    limit = options[limit_choice]
+    else:
 
-    if limit_choice != "All" and not search.strip():
-        result = result.head(limit)
+        # Apply Top N only when showing all car parks
+        limit = options[limit_choice]
+
+        if limit_choice != "All":
+            result = result.head(limit)
 
     return result
+
 
 
 def get_chart_height(number_of_rows):
@@ -76,15 +76,12 @@ def get_chart_height(number_of_rows):
 # --------------------------------------------------
 # CHECK DATA
 # --------------------------------------------------
-
 if filtered.empty:
     st.warning("No transactions match the selected filters.")
     st.stop()
-
 if date_col is None:
     st.warning("No supported date column was found.")
     st.stop()
-
 if filtered["report_date"].notna().sum() == 0:
     st.warning("No valid transaction dates are available.")
     st.stop()
@@ -103,7 +100,6 @@ filtered["car_park_name"] = (
 # ==================================================
 # 1. PAYMENT BY CAR PARK
 # ==================================================
-
 st.divider()
 st.subheader("Total Payment By Carpark")
 
@@ -124,11 +120,8 @@ payment_display = get_chart_limit(
 )
 
 if payment_display.empty:
-
     st.info("No matching car parks found.")
-
 else:
-
     st.caption(
         f"Displaying {len(payment_display):,} of "
         f"{len(carpark_payment):,} car parks."
@@ -185,22 +178,16 @@ else:
     # ----------------------------------------------
     # SELECT CAR PARK
     # ----------------------------------------------
-
     selected_points = event.selection.points
-
     if selected_points:
-
         clicked_carpark = selected_points[0]["y"]
-
         current_carpark = st.session_state.get(
             "selected_carpark"
         )
-
         if current_carpark == clicked_carpark:
             st.session_state["selected_carpark"] = None
         else:
             st.session_state["selected_carpark"] = clicked_carpark
-
     selected_carpark = st.session_state.get(
         "selected_carpark"
     )
@@ -208,15 +195,9 @@ else:
     # ----------------------------------------------
     # MONTHLY PAYMENT BREAKDOWN
     # ----------------------------------------------
-
     if selected_carpark is not None:
-
         st.divider()
-
-        st.subheader(
-            f"Monthly Payment Breakdown - {selected_carpark}"
-        )
-
+        st.subheader(f"Monthly Payment Breakdown - {selected_carpark}")
         carpark_monthly = (
             filtered[
                 filtered["car_park_name"] == selected_carpark
@@ -229,9 +210,7 @@ else:
             )
             .sort_values("month")
         )
-
         if not carpark_monthly.empty:
-
             fig_monthly = px.bar(
                 carpark_monthly,
                 x="month",
@@ -277,7 +256,6 @@ else:
 # ==================================================
 # 2. ENERGY BY CAR PARK
 # ==================================================
-
 st.divider()
 st.subheader("Energy Delivered By Carpark")
 
