@@ -328,11 +328,9 @@ else:
         .sort_values("month")
     )
     fig = 
-        #px.bar(monthly,x="month",y="payment_amount",text="payment_amount",
-        px.bar(monthly,x="month",y="payment_amount",
+        px.bar(monthly,x="month",y="payment_amount",text="payment_amount",
         custom_data=["transactions"],
-        #labels={"month": "Month","payment_amount": "Payment Amount"},
-        labels={"month": "Month"},
+        labels={"month": "Month","payment_amount": "Payment Amount"},
         template="plotly_white",
         color_discrete_sequence=["#00A99D"]
     )
