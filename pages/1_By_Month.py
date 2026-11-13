@@ -347,7 +347,9 @@ else:
     )
 
     fig.update_layout(height=450,showlegend=False,margin=dict(t=30, b=30, l=20, r=20),
-        xaxis_title="Month",yaxis_title="Total Payment",yaxis_tickprefix="$",
+        xaxis_title="Month",
+        #yaxis_title="Total Payment",
+        yaxis_tickprefix="$",
         yaxis_tickformat=",.2f",clickmode="event+select"
     )
 
