@@ -11,7 +11,7 @@ st.set_page_config(
 )
 
 dashboard_page = st.Page(
-    os.path.join(BASE_DIR, "pages", "1_EV_Billing_Summary.py"),
+    os.path.join(BASE_DIR, "pages", "1_By_Month.py"),
     title="By Month",
     default=True
 )
