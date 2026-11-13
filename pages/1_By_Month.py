@@ -327,9 +327,12 @@ else:
         .agg(payment_amount=("payment_amount", "sum"),transactions=("payment_amount", "size"))
         .sort_values("month")
     )
-    fig = px.bar(monthly,x="month",y="payment_amount",text="payment_amount",
+    fig = 
+        #px.bar(monthly,x="month",y="payment_amount",text="payment_amount",
+        px.bar(monthly,x="month",y="payment_amount",
         custom_data=["transactions"],
-        labels={"month": "Month","payment_amount": "Payment Amount"},
+        #labels={"month": "Month","payment_amount": "Payment Amount"},
+        labels={"month": "Month"},
         template="plotly_white",
         color_discrete_sequence=["#00A99D"]
     )
@@ -348,7 +351,7 @@ else:
 
     fig.update_layout(height=450,showlegend=False,margin=dict(t=30, b=30, l=20, r=20),
         xaxis_title="Month",
-        #yaxis_title="Total Payment",
+        yaxis_title="Total Payment",
         yaxis_tickprefix="$",
         yaxis_tickformat=",.2f",clickmode="event+select"
     )
