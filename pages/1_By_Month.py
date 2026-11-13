@@ -327,8 +327,7 @@ else:
         .agg(payment_amount=("payment_amount", "sum"),transactions=("payment_amount", "size"))
         .sort_values("month")
     )
-    fig = 
-        px.bar(monthly,x="month",y="payment_amount",text="payment_amount",
+    fig = px.bar(monthly,x="month",y="payment_amount",text="payment_amount",
         custom_data=["transactions"],
         labels={"month": "Month","payment_amount": "Payment Amount"},
         template="plotly_white",
