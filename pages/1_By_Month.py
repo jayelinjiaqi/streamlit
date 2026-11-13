@@ -125,7 +125,7 @@ def load_ev_data():
 # --------------------------------------------------
 # LOAD AND VALIDATE DATA
 # --------------------------------------------------
-st.title("EV | Billing Summary")
+st.title("EV Billing Summary")
 # st.caption("Transaction analytics | Neon PostgreSQL")
 
 try:
