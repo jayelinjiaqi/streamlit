@@ -113,11 +113,11 @@ def load_ev_data():
         with conn.cursor() as cur:
             cur.execute("""
             SELECT e.*, c.name as car_park_name, cpo.name as car_park_owner, op.name as car_park_operator
-            FROM ev_paid_datetime e
-            LEFT JOIN car_park c on e.car_park_id = c.id
-            LEFT JOIN car_park_owner cpo on c.car_park_owner_id = cpo.id
-            LEFT JOIN car_park_operator op on c.car_park_operator_id = op.id
-            LIMIT 500""")
+            FROM public.ev_paid_datetime e
+            LEFT JOIN public.car_park c on e.car_park_id = c.id
+            LEFT JOIN public.car_park_owner cpo on c.car_park_owner_id = cpo.id
+            LEFT JOIN public.car_park_operator op on c.car_park_operator_id = op.id
+            LIMIT 50""")
             columns = [desc.name for desc in cur.description]
             rows = cur.fetchall()
     return pd.DataFrame(rows, columns=columns)
