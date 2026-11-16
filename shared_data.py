@@ -20,7 +20,7 @@ def load_ev_data():
         with conn.cursor() as cur:
             cur.execute("""
                 SELECT e.*,c.name AS car_park_name,cpo.name AS car_park_owner,op.name AS car_park_operator
-                FROM ev_paid_datetime e
+                FROM public.ev_paid_datetime e
                 LEFT JOIN car_park c ON e.car_park_id = c.id
                 LEFT JOIN car_park_owner cpo ON c.car_park_owner_id = c.id
                 LEFT JOIN car_park_operator op ON c.car_park_operator_id = op.id
