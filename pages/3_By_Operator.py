@@ -1,12 +1,11 @@
-
 from shared_data import get_filtered_data
 import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-# --------------------------------------------------
+# ==================================================
 # PAGE CONFIGURATION
-# --------------------------------------------------
+# ==================================================
 
 st.title("EV Billing Summary By Car Park Operator")
 
@@ -50,11 +49,11 @@ filtered["car_park_operator"] = (
 
 filtered["payment_amount"] = pd.to_numeric(
     filtered["payment_amount"], errors="coerce"
-)
+).fillna(0)
 
 filtered["ci_power"] = pd.to_numeric(
     filtered["ci_power"], errors="coerce"
-)
+).fillna(0)
 
 
 # --------------------------------------------------
@@ -66,7 +65,6 @@ st.subheader("Operator Filters")
 col1, col2 = st.columns([1, 2])
 
 with col1:
-
     limit_choice = st.selectbox(
         "Number of operators",
         ["Top 10", "Top 20", "Top 30", "Top 50", "All"],
@@ -75,15 +73,16 @@ with col1:
     )
 
 with col2:
-
     all_operators = sorted(
         filtered["car_park_operator"].unique().tolist()
     )
 
+    if "shared_operator_search" not in st.session_state:
+        st.session_state["shared_operator_search"] = "All Operators"
+
     selected_operator_search = st.selectbox(
         "Search car park operator",
         options=["All Operators"] + all_operators,
-        index=0,
         key="shared_operator_search",
         placeholder="Type operator name..."
     )
@@ -98,10 +97,10 @@ limit_options = {
     "Top 20": 20,
     "Top 30": 30,
     "Top 50": 50,
-    "All": len(all_operators)
+    "All": len(all_operators) if all_operators else 1
 }
 
-limit = limit_options[limit_choice]
+limit = limit_options.get(limit_choice, 10)
 
 
 # --------------------------------------------------
@@ -142,16 +141,11 @@ operator_payment = (
 # --------------------------------------------------
 
 if selected_operator_search != "All Operators":
-
     payment_display = operator_payment[
-        operator_payment["car_park_operator"]
-        == selected_operator_search
+        operator_payment["car_park_operator"] == selected_operator_search
     ].copy()
-
 else:
-
     payment_display = operator_payment.head(limit).copy()
-
 
 st.caption(
     f"Displaying {len(payment_display):,} of "
@@ -164,11 +158,8 @@ st.caption(
 # --------------------------------------------------
 
 if payment_display.empty:
-
     st.info("No matching operators found.")
-
 else:
-
     fig_payment = px.bar(
         payment_display,
         x="payment_amount",
@@ -216,56 +207,34 @@ else:
         selection_mode="points"
     )
 
-    # --------------------------------------------------
-    # SELECT OPERATOR FROM PAYMENT CHART
-    # --------------------------------------------------
-
     selected_points = event_payment.selection.points
-
     if selected_points:
-
         clicked_operator = selected_points[0]["y"]
-
-        current_operator = st.session_state.get(
-            "selected_payment_operator"
-        )
+        current_operator = st.session_state.get("selected_payment_operator")
 
         if current_operator == clicked_operator:
             st.session_state["selected_payment_operator"] = None
         else:
-            st.session_state["selected_payment_operator"] = (
-                clicked_operator
-            )
+            st.session_state["selected_payment_operator"] = clicked_operator
 
 
 # --------------------------------------------------
 # PAYMENT MONTHLY BREAKDOWN
 # --------------------------------------------------
 
-selected_payment_operator = st.session_state.get(
-    "selected_payment_operator"
-)
+selected_payment_operator = st.session_state.get("selected_payment_operator")
 
-# Search selection takes priority over chart selection
 if selected_operator_search != "All Operators":
     payment_monthly_operator = selected_operator_search
 else:
     payment_monthly_operator = selected_payment_operator
 
-
 if payment_monthly_operator is not None:
-
     st.divider()
-
-    st.subheader(
-        f"Monthly Payment Breakdown - {payment_monthly_operator}"
-    )
+    st.subheader(f"Monthly Payment Breakdown - {payment_monthly_operator}")
 
     operator_monthly = (
-        valid_data[
-            valid_data["car_park_operator"]
-            == payment_monthly_operator
-        ]
+        valid_data[valid_data["car_park_operator"] == payment_monthly_operator]
         .groupby("month", as_index=False)
         .agg(
             payment_amount=("payment_amount", "sum"),
@@ -275,7 +244,6 @@ if payment_monthly_operator is not None:
     )
 
     if not operator_monthly.empty:
-
         fig_monthly = px.bar(
             operator_monthly,
             x="month",
@@ -303,17 +271,8 @@ if payment_monthly_operator is not None:
             yaxis_tickformat=",.0f"
         )
 
-        st.plotly_chart(
-            fig_monthly,
-            use_container_width=True
-        )
-
-        st.dataframe(
-            operator_monthly,
-            use_container_width=True,
-            hide_index=True
-        )
-
+        st.plotly_chart(fig_monthly, use_container_width=True)
+        st.dataframe(operator_monthly, use_container_width=True, hide_index=True)
     else:
         st.info("No monthly payment records found.")
 
@@ -335,39 +294,21 @@ operator_energy = (
     .sort_values("energy_delivered", ascending=False)
 )
 
-
-# --------------------------------------------------
-# APPLY SAME SEARCH AND TOP N FILTER
-# --------------------------------------------------
-
 if selected_operator_search != "All Operators":
-
     energy_display = operator_energy[
-        operator_energy["car_park_operator"]
-        == selected_operator_search
+        operator_energy["car_park_operator"] == selected_operator_search
     ].copy()
-
 else:
-
     energy_display = operator_energy.head(limit).copy()
-
 
 st.caption(
     f"Displaying {len(energy_display):,} of "
     f"{len(operator_energy):,} operators."
 )
 
-
-# --------------------------------------------------
-# ENERGY CHART
-# --------------------------------------------------
-
 if energy_display.empty:
-
     st.info("No matching operators found.")
-
 else:
-
     fig_energy = px.bar(
         energy_display,
         x="energy_delivered",
@@ -415,57 +356,34 @@ else:
         selection_mode="points"
     )
 
-
-    # --------------------------------------------------
-    # SELECT OPERATOR FROM ENERGY CHART
-    # --------------------------------------------------
-
     selected_points = event_energy.selection.points
-
     if selected_points:
-
         clicked_operator = selected_points[0]["y"]
-
-        current_operator = st.session_state.get(
-            "selected_energy_operator"
-        )
+        current_operator = st.session_state.get("selected_energy_operator")
 
         if current_operator == clicked_operator:
             st.session_state["selected_energy_operator"] = None
         else:
-            st.session_state["selected_energy_operator"] = (
-                clicked_operator
-            )
+            st.session_state["selected_energy_operator"] = clicked_operator
 
 
 # --------------------------------------------------
 # ENERGY MONTHLY BREAKDOWN
 # --------------------------------------------------
 
-selected_energy_operator = st.session_state.get(
-    "selected_energy_operator"
-)
+selected_energy_operator = st.session_state.get("selected_energy_operator")
 
-# Search selection takes priority over chart selection
 if selected_operator_search != "All Operators":
     energy_monthly_operator = selected_operator_search
 else:
     energy_monthly_operator = selected_energy_operator
 
-
 if energy_monthly_operator is not None:
-
     st.divider()
-
-    st.subheader(
-        f"Monthly Energy Breakdown - {energy_monthly_operator}"
-    )
+    st.subheader(f"Monthly Energy Breakdown - {energy_monthly_operator}")
 
     operator_monthly_energy = (
-        valid_data[
-            valid_data["car_park_operator"]
-            == energy_monthly_operator
-        ]
+        valid_data[valid_data["car_park_operator"] == energy_monthly_operator]
         .groupby("month", as_index=False)
         .agg(
             energy_delivered=("ci_power", "sum"),
@@ -475,7 +393,6 @@ if energy_monthly_operator is not None:
     )
 
     if not operator_monthly_energy.empty:
-
         fig_energy_monthly = px.bar(
             operator_monthly_energy,
             x="month",
@@ -503,17 +420,7 @@ if energy_monthly_operator is not None:
             yaxis_tickformat=",.0f"
         )
 
-        st.plotly_chart(
-            fig_energy_monthly,
-            use_container_width=True
-        )
-
-        st.dataframe(
-            operator_monthly_energy,
-            use_container_width=True,
-            hide_index=True
-        )
-
+        st.plotly_chart(fig_energy_monthly, use_container_width=True)
+        st.dataframe(operator_monthly_energy, use_container_width=True, hide_index=True)
     else:
         st.info("No monthly energy records found.")
-
