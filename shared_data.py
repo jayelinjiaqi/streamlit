@@ -1,177 +1,411 @@
-import os
-import pandas as pd
-import psycopg
 import streamlit as st
-from dotenv import load_dotenv
+import pandas as pd
+import plotly.express as px
+from shared_data import get_filtered_data
 
-load_dotenv()
+# ==================================================
+# PAGE CONFIGURATION
+# ==================================================
+st.set_page_config(
+    page_title="EV Billing Summary By Car Park Operator",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
-DATABASE_URL = os.getenv("DATABASE_URL")
+st.title("EV Billing Summary By Car Park Operator")
 
-# --------------------------------------------------
-# DATABASE
-# --------------------------------------------------
-@st.cache_data(ttl=300, show_spinner="Loading EV transactions...")
-def load_ev_data():
-    if not DATABASE_URL:
-        raise ValueError("DATABASE_URL is missing from .env")
-    with psycopg.connect(DATABASE_URL) as conn:
-        with conn.cursor() as cur:
-            cur.execute("""
-                SELECT e.*, c.name AS car_park_name, cpo.name AS car_park_owner, op.name AS car_park_operator
-                FROM public.ev_paid_datetime e
-                LEFT JOIN public.car_park c ON e.car_park_id = c.id
-                LEFT JOIN public.car_park_owner cpo ON c.car_park_owner_id = cpo.id
-                LEFT JOIN public.car_park_operator op ON c.car_park_operator_id = op.id
-                LIMIT 500
-            """)
-            columns = [desc.name for desc in cur.description]
-            rows = cur.fetchall()
-    return pd.DataFrame(rows, columns=columns)
+CHART_COLOR = "#00A99D"
 
+# Fetch globally filtered data from shared_data.py
+filtered, date_col = get_filtered_data()
 
-# --------------------------------------------------
-# LOAD AND PREPARE DATA
-# --------------------------------------------------
-@st.cache_data(ttl=300)
-def prepare_ev_data():
-    df = load_ev_data()
-    required = ["car_park_id", "payment_amount_100"]
-    missing = [col for col in required if col not in df.columns]
-    if missing:
-        raise ValueError(f"Missing required columns: {', '.join(missing)}")
-    if df.empty:
-        return df, None
-        
-    df["payment_amount_100"] = pd.to_numeric(df["payment_amount_100"], errors="coerce")
-    df["payment_amount"] = df["payment_amount_100"]
-    df["ci_power"] = pd.to_numeric(df["ci_power"], errors="coerce")
+# ==================================================
+# VALIDATE DATA
+# ==================================================
 
-    date_candidates = ["paid_dt_p8"]
-    date_col = next(
-        (col for col in date_candidates if col in df.columns),
-        None
+if filtered.empty:
+    st.warning("No transactions match the selected filters.")
+    st.stop()
+
+if date_col is None:
+    st.warning("No supported date column was found.")
+    st.stop()
+
+if filtered["report_date"].notna().sum() == 0:
+    st.warning("No valid transaction dates are available.")
+    st.stop()
+
+if "car_park_operator" not in filtered.columns:
+    st.error("car_park_operator column was not found.")
+    st.stop()
+
+# ==================================================
+# CLEAN DATA
+# ==================================================
+
+filtered = filtered.copy()
+
+filtered["car_park_operator"] = (
+    filtered["car_park_operator"]
+    .fillna("Unknown")
+    .astype(str)
+)
+
+filtered["payment_amount"] = pd.to_numeric(
+    filtered["payment_amount"], errors="coerce"
+).fillna(0)
+
+filtered["ci_power"] = pd.to_numeric(
+    filtered["ci_power"], errors="coerce"
+).fillna(0)
+
+# ==================================================
+# SHARED OPERATOR FILTERS
+# ==================================================
+
+st.subheader("Operator Filters")
+
+col1, col2 = st.columns([1, 2])
+
+with col1:
+    limit_choice = st.selectbox(
+        "Number of operators",
+        ["Top 10", "Top 20", "Top 30", "Top 50", "All"],
+        index=1,
+        key="shared_operator_limit"
     )
 
-    if date_col:
-        df[date_col] = pd.to_datetime(df[date_col], errors="coerce")
-        df["report_date"] = df[date_col]
-        df["month"] = df["report_date"].dt.to_period("M").astype(str)
-    else:
-        df["report_date"] = pd.NaT
-        df["month"] = None
+with col2:
+    all_operators = sorted(
+        filtered["car_park_operator"].unique().tolist()
+    )
+    
+    # Ensure session state safety for search selection
+    if "shared_operator_search" not in st.session_state:
+        st.session_state["shared_operator_search"] = "All Operators"
 
-    df["car_park_id"] = df["car_park_id"].astype("string").fillna("Unknown")
-    df["car_park_name"] = df["car_park_name"].astype("string").fillna("Unknown")
-    df["car_park_owner"] = df["car_park_owner"].astype("string").fillna("Unknown")
-    df["car_park_operator"] = df["car_park_operator"].astype("string").fillna("Unknown")
-    return df, date_col
-
-
-# --------------------------------------------------
-# SHARED SIDEBAR FILTERS (GLOBAL)
-# --------------------------------------------------
-def get_filtered_data():
-    try:
-        df, date_col = prepare_ev_data()
-    except Exception as exc:
-        st.error(f"Unable to load data: {exc}")
-        st.stop()
-        
-    if df.empty:
-        st.warning("The ev table contains no records.")
-        st.stop()
-        
-    st.sidebar.header("Dashboard Filters")
-
-    # --- 1. CAR PARK NAME ---
-    carparks = sorted(df["car_park_name"].unique().tolist())
-    if "filter_carparks" not in st.session_state:
-        st.session_state["filter_carparks"] = carparks
-
-    selected_carparks = st.sidebar.multiselect(
-        "Car Park Name",
-        options=carparks,
-        key="filter_carparks"
+    selected_operator_search = st.selectbox(
+        "Search car park operator",
+        options=["All Operators"] + all_operators,
+        key="shared_operator_search",
+        placeholder="Type operator name..."
     )
 
-    # --- 2. CAR PARK OWNER ---
-    owners = sorted(df["car_park_owner"].unique().tolist())
-    if "filter_owners" not in st.session_state:
-        st.session_state["filter_owners"] = owners
+# ==================================================
+# NUMBER OF OPERATORS
+# ==================================================
 
-    selected_owners = st.sidebar.multiselect(
-        "Car Park Owner",
-        options=owners,
-        key="filter_owners"
+limit_options = {
+    "Top 10": 10,
+    "Top 20": 20,
+    "Top 30": 30,
+    "Top 50": 50,
+    "All": len(all_operators) if all_operators else 1
+}
+
+limit = limit_options.get(limit_choice, 10)
+
+# ==================================================
+# CHART HEIGHT UTILITY
+# ==================================================
+
+def get_chart_height(number_of_rows):
+    return max(450, min(number_of_rows * 35 + 100, 1600))
+
+# ==================================================
+# PREPARE CHART DATA
+# ==================================================
+
+valid_data = filtered.dropna(subset=["report_date"]).copy()
+
+# ==================================================
+# 1. TOTAL PAYMENT BY OPERATOR
+# ==================================================
+
+st.divider()
+st.subheader("Total Payment By Car Park Operator")
+
+operator_payment = (
+    valid_data
+    .groupby("car_park_operator", as_index=False)
+    .agg(
+        payment_amount=("payment_amount", "sum"),
+        transactions=("payment_amount", "count")
     )
+    .sort_values("payment_amount", ascending=False)
+)
 
-    # --- 3. CAR PARK OPERATOR ---
-    operators = sorted(df["car_park_operator"].unique().tolist())
-    if "filter_operators" not in st.session_state:
-        st.session_state["filter_operators"] = operators
-
-    selected_operators = st.sidebar.multiselect(
-        "Car Park Operator",
-        options=operators,
-        key="filter_operators"
-    )
-
-    # --- 4. STAKE ID ---
-    if "ci_stake_id" in df.columns:
-        df["ci_stake"] = df["ci_stake_id"].astype("string").fillna("Unknown")
-        stakes = sorted(df["ci_stake"].unique().tolist())
-        if "filter_stakes" not in st.session_state:
-            st.session_state["filter_stakes"] = stakes
-
-        selected_stakes = st.sidebar.multiselect(
-            "Stake ID",
-            options=stakes,
-            key="filter_stakes"
-        )
-    else:
-        selected_stakes = None
-
-    # --- 5. DATE RANGE ---
-    if date_col and df["report_date"].notna().any():
-        valid_dates = df["report_date"].dropna()
-        min_date = valid_dates.min().date()
-        max_date = valid_dates.max().date()
-
-        if "filter_date_range" not in st.session_state:
-            st.session_state["filter_date_range"] = (min_date, max_date)
-
-        date_range = st.sidebar.date_input(
-            "Transaction date range",
-            min_value=min_date,
-            max_value=max_date,
-            key="filter_date_range"
-        )
-    else:
-        date_range = None
-
-    # --- REFRESH BUTTON ---
-    if st.sidebar.button("Refresh data"):
-        load_ev_data.clear()
-        prepare_ev_data.clear()
-        st.rerun()
-
-    # --- APPLY FILTERS ---
-    filtered = df[
-        df["car_park_name"].isin(selected_carparks)
-        & df["car_park_owner"].isin(selected_owners)
-        & df["car_park_operator"].isin(selected_operators)
+if selected_operator_search != "All Operators":
+    payment_display = operator_payment[
+        operator_payment["car_park_operator"] == selected_operator_search
     ].copy()
+else:
+    payment_display = operator_payment.head(limit).copy()
 
-    if selected_stakes is not None:
-        filtered = filtered[filtered["ci_stake"].isin(selected_stakes)]
+st.caption(
+    f"Displaying {len(payment_display):,} of "
+    f"{len(operator_payment):,} operators."
+)
 
-    if date_range and isinstance(date_range, tuple) and len(date_range) == 2:
-        start_date, end_date = date_range
-        filtered = filtered[
-            filtered["report_date"].notna()
-            & (filtered["report_date"].dt.date >= start_date)
-            & (filtered["report_date"].dt.date <= end_date)
-        ]
+if payment_display.empty:
+    st.info("No matching operators found.")
+else:
+    fig_payment = px.bar(
+        payment_display,
+        x="payment_amount",
+        y="car_park_operator",
+        orientation="h",
+        custom_data=["transactions"],
+        labels={
+            "car_park_operator": "Car Park Operator",
+            "payment_amount": "Payment Amount"
+        },
+        template="plotly_white",
+        color_discrete_sequence=[CHART_COLOR]
+    )
 
-    return filtered, date_col
+    fig_payment.update_traces(
+        hovertemplate=(
+            "<b>%{y}</b><br>"
+            "Payment: $%{x:,.2f}<br>"
+            "Transactions: %{customdata[0]:,}"
+            "<extra></extra>"
+        )
+    )
+
+    fig_payment.update_layout(
+        height=get_chart_height(len(payment_display)),
+        margin=dict(t=30, b=40, l=20, r=50),
+        xaxis_title="Total Payment ($)",
+        yaxis_title="Car Park Operator",
+        xaxis_tickprefix="$",
+        xaxis_tickformat=",.0f",
+        yaxis=dict(
+            categoryorder="total ascending",
+            automargin=True
+        ),
+        showlegend=False,
+        bargap=0.25,
+        font=dict(size=12)
+    )
+
+    event_payment = st.plotly_chart(
+        fig_payment,
+        use_container_width=True,
+        key="operator_payment_chart",
+        on_select="rerun",
+        selection_mode="points"
+    )
+
+    selected_points = event_payment.selection.points
+    if selected_points:
+        clicked_operator = selected_points[0]["y"]
+        current_operator = st.session_state.get("selected_payment_operator")
+        if current_operator == clicked_operator:
+            st.session_state["selected_payment_operator"] = None
+        else:
+            st.session_state["selected_payment_operator"] = clicked_operator
+
+# ==================================================
+# PAYMENT MONTHLY BREAKDOWN
+# ==================================================
+
+selected_payment_operator = st.session_state.get("selected_payment_operator")
+
+if selected_operator_search != "All Operators":
+    payment_monthly_operator = selected_operator_search
+else:
+    payment_monthly_operator = selected_payment_operator
+
+if payment_monthly_operator is not None:
+    st.divider()
+    st.subheader(f"Monthly Payment Breakdown - {payment_monthly_operator}")
+
+    operator_monthly = (
+        valid_data[valid_data["car_park_operator"] == payment_monthly_operator]
+        .groupby("month", as_index=False)
+        .agg(
+            payment_amount=("payment_amount", "sum"),
+            transactions=("payment_amount", "count")
+        )
+        .sort_values("month")
+    )
+
+    if not operator_monthly.empty:
+        fig_monthly = px.bar(
+            operator_monthly,
+            x="month",
+            y="payment_amount",
+            custom_data=["transactions"],
+            template="plotly_white",
+            color_discrete_sequence=[CHART_COLOR]
+        )
+
+        fig_monthly.update_traces(
+            hovertemplate=(
+                "Month: %{x}<br>"
+                "Payment: $%{y:,.2f}<br>"
+                "Transactions: %{customdata[0]:,}"
+                "<extra></extra>"
+            )
+        )
+
+        fig_monthly.update_layout(
+            height=450,
+            showlegend=False,
+            xaxis_title="Month",
+            yaxis_title="Total Payment ($)",
+            yaxis_tickprefix="$",
+            yaxis_tickformat=",.0f"
+        )
+
+        st.plotly_chart(fig_monthly, use_container_width=True)
+        st.dataframe(operator_monthly, use_container_width=True, hide_index=True)
+    else:
+        st.info("No monthly payment records found.")
+
+# ==================================================
+# 2. ENERGY DELIVERED BY OPERATOR
+# ==================================================
+
+st.divider()
+st.subheader("Energy Delivered By Car Park Operator")
+
+operator_energy = (
+    valid_data
+    .groupby("car_park_operator", as_index=False)
+    .agg(
+        energy_delivered=("ci_power", "sum"),
+        transactions=("ci_power", "count")
+    )
+    .sort_values("energy_delivered", ascending=False)
+)
+
+if selected_operator_search != "All Operators":
+    energy_display = operator_energy[
+        operator_energy["car_park_operator"] == selected_operator_search
+    ].copy()
+else:
+    energy_display = operator_energy.head(limit).copy()
+
+st.caption(
+    f"Displaying {len(energy_display):,} of "
+    f"{len(operator_energy):,} operators."
+)
+
+if energy_display.empty:
+    st.info("No matching operators found.")
+else:
+    fig_energy = px.bar(
+        energy_display,
+        x="energy_delivered",
+        y="car_park_operator",
+        orientation="h",
+        custom_data=["transactions"],
+        labels={
+            "car_park_operator": "Car Park Operator",
+            "energy_delivered": "Energy Delivered"
+        },
+        template="plotly_white",
+        color_discrete_sequence=[CHART_COLOR]
+    )
+
+    fig_energy.update_traces(
+        hovertemplate=(
+            "<b>%{y}</b><br>"
+            "Energy: %{x:,.2f} kWh<br>"
+            "Transactions: %{customdata[0]:,}"
+            "<extra></extra>"
+        )
+    )
+
+    fig_energy.update_layout(
+        height=get_chart_height(len(energy_display)),
+        margin=dict(t=30, b=40, l=20, r=60),
+        xaxis_title="Total Energy Delivered (kWh)",
+        yaxis_title="Car Park Operator",
+        xaxis_ticksuffix=" kWh",
+        xaxis_tickformat=",.0f",
+        yaxis=dict(
+            categoryorder="total ascending",
+            automargin=True
+        ),
+        showlegend=False,
+        bargap=0.25,
+        font=dict(size=12)
+    )
+
+    event_energy = st.plotly_chart(
+        fig_energy,
+        use_container_width=True,
+        key="operator_energy_chart",
+        on_select="rerun",
+        selection_mode="points"
+    )
+
+    selected_points = event_energy.selection.points
+    if selected_points:
+        clicked_operator = selected_points[0]["y"]
+        current_operator = st.session_state.get("selected_energy_operator")
+        if current_operator == clicked_operator:
+            st.session_state["selected_energy_operator"] = None
+        else:
+            st.session_state["selected_energy_operator"] = clicked_operator
+
+# ==================================================
+# ENERGY MONTHLY BREAKDOWN
+# ==================================================
+
+selected_energy_operator = st.session_state.get("selected_energy_operator")
+
+if selected_operator_search != "All Operators":
+    energy_monthly_operator = selected_operator_search
+else:
+    energy_monthly_operator = selected_energy_operator
+
+if energy_monthly_operator is not None:
+    st.divider()
+    st.subheader(f"Monthly Energy Breakdown - {energy_monthly_operator}")
+
+    operator_monthly_energy = (
+        valid_data[valid_data["car_park_operator"] == energy_monthly_operator]
+        .groupby("month", as_index=False)
+        .agg(
+            energy_delivered=("ci_power", "sum"),
+            transactions=("ci_power", "count")
+        )
+        .sort_values("month")
+    )
+
+    if not operator_monthly_energy.empty:
+        fig_energy_monthly = px.bar(
+            operator_monthly_energy,
+            x="month",
+            y="energy_delivered",
+            custom_data=["transactions"],
+            template="plotly_white",
+            color_discrete_sequence=[CHART_COLOR]
+        )
+
+        fig_energy_monthly.update_traces(
+            hovertemplate=(
+                "Month: %{x}<br>"
+                "Energy: %{y:,.2f} kWh<br>"
+                "Transactions: %{customdata[0]:,}"
+                "<extra></extra>"
+            )
+        )
+
+        fig_energy_monthly.update_layout(
+            height=450,
+            showlegend=False,
+            xaxis_title="Month",
+            yaxis_title="Energy Delivered (kWh)",
+            yaxis_ticksuffix=" kWh",
+            yaxis_tickformat=",.0f"
+        )
+
+        st.plotly_chart(fig_energy_monthly, use_container_width=True)
+        st.dataframe(operator_monthly_energy, use_container_width=True, hide_index=True)
+    else:
+        st.info("No monthly energy records found.")
