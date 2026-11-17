@@ -5,11 +5,12 @@ import psycopg
 import streamlit as st
 
 
-# ==================================================
-# CLOUD CONFIGURATION
-# ==================================================
+# =========================================================
+# CONFIGURATION
+# =========================================================
 
 def get_secret(name, default=None):
+    """Read configuration from Streamlit Secrets or environment variables."""
     try:
         return st.secrets.get(name, default)
     except Exception:
@@ -17,24 +18,18 @@ def get_secret(name, default=None):
 
 
 DATABASE_URL = get_secret("DATABASE_URL")
-
 CACHE_TTL = int(get_secret("CACHE_TTL", 300))
-
 CURRENCY_SYMBOL = get_secret("CURRENCY_SYMBOL", "$")
-
 PAYMENT_DIVISOR = float(get_secret("PAYMENT_DIVISOR", 1))
 
 DATE_COLUMN_CANDIDATES = ["paid_dt_p8"]
 
 
-# ==================================================
-# DATABASE LOADER
-# ==================================================
+# =========================================================
+# LOAD DATA
+# =========================================================
 
-@st.cache_data(
-    ttl=CACHE_TTL,
-    show_spinner="Loading EV transactions..."
-)
+@st.cache_data(ttl=CACHE_TTL, show_spinner="Loading EV transactions...")
 def load_ev_data():
 
     if not DATABASE_URL:
@@ -48,15 +43,11 @@ def load_ev_data():
             c.name AS car_park_name,
             cpo.name AS car_park_owner,
             op.name AS car_park_operator
-
         FROM public.ev_paid_datetime e
-
         LEFT JOIN public.car_park c
             ON e.car_park_id = c.id
-
         LEFT JOIN public.car_park_owner cpo
             ON c.car_park_owner_id = cpo.id
-
         LEFT JOIN public.car_park_operator op
             ON c.car_park_operator_id = op.id
     """
@@ -72,9 +63,42 @@ def load_ev_data():
     return df
 
 
-# ==================================================
-# PREPARE EV DATA
-# ==================================================
+# =========================================================
+# CLEAN DATA
+# =========================================================
+
+def clean_identifier_columns(df):
+    """
+    Normalize identifier columns to pandas string dtype.
+
+    This prevents mixed integer/string values, such as an
+    integer Connector ID mixed with empty strings, from
+    causing PyArrow serialization errors in Streamlit.
+    """
+
+    for col in df.columns:
+
+        normalized_name = (
+            str(col)
+            .strip()
+            .lower()
+            .replace("_", " ")
+        )
+
+        if normalized_name in (
+            "connector id",
+            "ci connector id"
+        ):
+
+            df[col] = (
+                df[col]
+                .astype("string")
+                .str.strip()
+                .replace("", pd.NA)
+            )
+
+    return df
+
 
 @st.cache_data(ttl=CACHE_TTL)
 def prepare_ev_data():
@@ -93,15 +117,16 @@ def prepare_ev_data():
 
     if missing:
         raise ValueError(
-            f"Missing required database columns: {', '.join(missing)}"
+            "Missing required database columns: "
+            + ", ".join(missing)
         )
 
     if df.empty:
         return df, None
 
-    # ----------------------------------------------
-    # PAYMENT
-    # ----------------------------------------------
+    # -----------------------------------------------------
+    # PAYMENT AMOUNT
+    # -----------------------------------------------------
 
     df["payment_amount_100"] = pd.to_numeric(
         df["payment_amount_100"],
@@ -112,9 +137,9 @@ def prepare_ev_data():
         df["payment_amount_100"] / PAYMENT_DIVISOR
     )
 
-    # ----------------------------------------------
+    # -----------------------------------------------------
     # ENERGY
-    # ----------------------------------------------
+    # -----------------------------------------------------
 
     if "ci_power" in df.columns:
 
@@ -127,30 +152,28 @@ def prepare_ev_data():
 
         df["ci_power"] = 0.0
 
-    # ----------------------------------------------
-    # CONNECTOR ID CLEANING
-    # ----------------------------------------------
+    # -----------------------------------------------------
+    # CONNECTOR ID
+    # -----------------------------------------------------
 
-    connector_columns = [
-        "ci_connector_id",
-        "Connector ID"
-    ]
+    df = clean_identifier_columns(df)
 
-    for col in connector_columns:
+    # Also handle the database field if its name is
+    # ci_connector_id or another capitalization variant.
+    for col in df.columns:
 
-        if col in df.columns:
+        if str(col).strip().lower() == "ci_connector_id":
 
             df[col] = (
-                pd.to_numeric(
-                    df[col].replace(r"^\s*$", pd.NA, regex=True),
-                    errors="coerce"
-                )
-                .astype("Int64")
+                df[col]
+                .astype("string")
+                .str.strip()
+                .replace("", pd.NA)
             )
 
-    # ----------------------------------------------
+    # -----------------------------------------------------
     # DATE
-    # ----------------------------------------------
+    # -----------------------------------------------------
 
     date_col = next(
         (
@@ -185,9 +208,9 @@ def prepare_ev_data():
             dtype="string"
         )
 
-    # ----------------------------------------------
+    # -----------------------------------------------------
     # DIMENSION COLUMNS
-    # ----------------------------------------------
+    # -----------------------------------------------------
 
     dimension_columns = [
         "car_park_id",
@@ -199,7 +222,6 @@ def prepare_ev_data():
     for col in dimension_columns:
 
         if col not in df.columns:
-
             df[col] = "Unknown"
 
         df[col] = (
@@ -208,9 +230,9 @@ def prepare_ev_data():
             .fillna("Unknown")
         )
 
-    # ----------------------------------------------
+    # -----------------------------------------------------
     # STAKE ID
-    # ----------------------------------------------
+    # -----------------------------------------------------
 
     if "ci_stake_id" in df.columns:
 
@@ -220,12 +242,15 @@ def prepare_ev_data():
             .fillna("Unknown")
         )
 
+    # Final identifier cleanup
+    df = clean_identifier_columns(df)
+
     return df, date_col
 
 
-# ==================================================
-# SHARED SIDEBAR FILTERS
-# ==================================================
+# =========================================================
+# SHARED DASHBOARD FILTERS
+# =========================================================
 
 def get_filtered_data():
 
@@ -235,10 +260,7 @@ def get_filtered_data():
 
     except Exception as exc:
 
-        st.error(
-            f"Unable to load EV data: {exc}"
-        )
-
+        st.error(f"Unable to load EV data: {exc}")
         st.stop()
 
     if df.empty:
@@ -249,14 +271,14 @@ def get_filtered_data():
 
         st.stop()
 
+    # -----------------------------------------------------
+    # SIDEBAR FILTERS
+    # -----------------------------------------------------
+
     st.sidebar.header("Dashboard Filters")
 
-    # ----------------------------------------------
-    # CAR PARK FILTER
-    # ----------------------------------------------
-
     carparks = sorted(
-        df["car_park_name"].unique().tolist()
+        df["car_park_name"].dropna().unique().tolist()
     )
 
     selected_carparks = st.sidebar.multiselect(
@@ -266,12 +288,8 @@ def get_filtered_data():
         key="filter_carparks"
     )
 
-    # ----------------------------------------------
-    # OWNER FILTER
-    # ----------------------------------------------
-
     owners = sorted(
-        df["car_park_owner"].unique().tolist()
+        df["car_park_owner"].dropna().unique().tolist()
     )
 
     selected_owners = st.sidebar.multiselect(
@@ -281,12 +299,8 @@ def get_filtered_data():
         key="filter_owners"
     )
 
-    # ----------------------------------------------
-    # OPERATOR FILTER
-    # ----------------------------------------------
-
     operators = sorted(
-        df["car_park_operator"].unique().tolist()
+        df["car_park_operator"].dropna().unique().tolist()
     )
 
     selected_operators = st.sidebar.multiselect(
@@ -296,14 +310,14 @@ def get_filtered_data():
         key="filter_operators"
     )
 
-    # ----------------------------------------------
-    # STAKE ID FILTER
-    # ----------------------------------------------
+    # -----------------------------------------------------
+    # STAKE FILTER
+    # -----------------------------------------------------
 
     if "ci_stake" in df.columns:
 
         stakes = sorted(
-            df["ci_stake"].unique().tolist()
+            df["ci_stake"].dropna().unique().tolist()
         )
 
         selected_stakes = st.sidebar.multiselect(
@@ -317,9 +331,9 @@ def get_filtered_data():
 
         selected_stakes = None
 
-    # ----------------------------------------------
+    # -----------------------------------------------------
     # DATE FILTER
-    # ----------------------------------------------
+    # -----------------------------------------------------
 
     date_range = None
 
@@ -341,9 +355,9 @@ def get_filtered_data():
             key="filter_date_range"
         )
 
-    # ----------------------------------------------
-    # REFRESH DATA
-    # ----------------------------------------------
+    # -----------------------------------------------------
+    # REFRESH BUTTON
+    # -----------------------------------------------------
 
     if st.sidebar.button(
         "Refresh Data",
@@ -355,9 +369,9 @@ def get_filtered_data():
 
         st.rerun()
 
-    # ----------------------------------------------
+    # -----------------------------------------------------
     # APPLY FILTERS
-    # ----------------------------------------------
+    # -----------------------------------------------------
 
     filtered = df[
         df["car_park_name"].isin(selected_carparks)
@@ -365,19 +379,11 @@ def get_filtered_data():
         & df["car_park_operator"].isin(selected_operators)
     ].copy()
 
-    # ----------------------------------------------
-    # APPLY STAKE FILTER
-    # ----------------------------------------------
-
     if selected_stakes is not None:
 
         filtered = filtered[
             filtered["ci_stake"].isin(selected_stakes)
         ]
-
-    # ----------------------------------------------
-    # APPLY DATE FILTER
-    # ----------------------------------------------
 
     if (
         isinstance(date_range, (tuple, list))
@@ -399,5 +405,9 @@ def get_filtered_data():
                     <= end_date
                 )
             ]
+
+    # Ensure connector identifiers remain consistent
+    # after filtering.
+    filtered = clean_identifier_columns(filtered)
 
     return filtered, date_col
