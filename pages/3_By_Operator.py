@@ -201,7 +201,7 @@ else:
 
     event_payment = st.plotly_chart(
         fig_payment,
-        use_container_width=True,
+        width="stretch"
         key="operator_payment_chart",
         on_select="rerun",
         selection_mode="points"
@@ -271,8 +271,8 @@ if payment_monthly_operator is not None:
             yaxis_tickformat=",.0f"
         )
 
-        st.plotly_chart(fig_monthly, use_container_width=True)
-        st.dataframe(operator_monthly, use_container_width=True, hide_index=True)
+        st.plotly_chart(fig_monthly, width="stretch")
+        st.dataframe(operator_monthly, width="stretch", hide_index=True)
     else:
         st.info("No monthly payment records found.")
 
@@ -350,7 +350,7 @@ else:
 
     event_energy = st.plotly_chart(
         fig_energy,
-        use_container_width=True,
+        width="stretch"
         key="operator_energy_chart",
         on_select="rerun",
         selection_mode="points"
@@ -420,7 +420,7 @@ if energy_monthly_operator is not None:
             yaxis_tickformat=",.0f"
         )
 
-        st.plotly_chart(fig_energy_monthly, use_container_width=True)
-        st.dataframe(operator_monthly_energy, use_container_width=True, hide_index=True)
+        st.plotly_chart(fig_energy_monthly, width="stretch")
+        st.dataframe(operator_monthly_energy, width="stretch", hide_index=True)
     else:
         st.info("No monthly energy records found.")
