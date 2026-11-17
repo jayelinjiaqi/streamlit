@@ -1,16 +1,24 @@
 
 import os
 import streamlit as st
-from utils.styles import apply_styles
 
-apply_styles()
+# --------------------------------------------------
+# PATH CONFIGURATION
+# --------------------------------------------------
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ASSETS_DIR = os.path.join(BASE_DIR, "assets")
 
+# --------------------------------------------------
+# PAGE CONFIGURATION
+# Must be the first Streamlit command
+# --------------------------------------------------
+
+favicon_path = os.path.join(ASSETS_DIR, "favicon.png")
+
 st.set_page_config(
     page_title="GoParkin | EV Billing & Analytics",
-    page_icon=os.path.join(ASSETS_DIR, "favicon.png"),
+    page_icon=favicon_path if os.path.exists(favicon_path) else "🚗",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -19,10 +27,7 @@ st.set_page_config(
 # BRANDING
 # --------------------------------------------------
 
-logo_path = os.path.join(
-    ASSETS_DIR,
-    "goparkin_logo.png"
-)
+logo_path = os.path.join(ASSETS_DIR, "goparkin_logo.png")
 
 if os.path.exists(logo_path):
     st.logo(logo_path, size="large")
@@ -65,6 +70,9 @@ pages = {
     ]
 }
 
-pg = st.navigation(pages)
+# --------------------------------------------------
+# RUN NAVIGATION
+# --------------------------------------------------
 
+pg = st.navigation(pages)
 pg.run()
