@@ -214,7 +214,7 @@ else:
 
     event_payment = st.plotly_chart(
         fig_payment,
-        use_container_width=True,
+        width="stretch"
         key="owner_payment_chart",
         on_select="rerun",
         selection_mode="points"
@@ -306,12 +306,12 @@ if payment_monthly_owner is not None:
 
         st.plotly_chart(
             fig_monthly,
-            use_container_width=True
+            width="stretch"
         )
 
         st.dataframe(
             owner_monthly,
-            use_container_width=True,
+            width="stretch",
             hide_index=True
         )
 
@@ -410,7 +410,7 @@ else:
 
     event_energy = st.plotly_chart(
         fig_energy,
-        use_container_width=True,
+        width="stretch",
         key="owner_energy_chart",
         on_select="rerun",
         selection_mode="points"
@@ -502,12 +502,12 @@ if energy_monthly_owner is not None:
 
         st.plotly_chart(
             fig_energy_monthly,
-            use_container_width=True
+            width="stretch"
         )
 
         st.dataframe(
             owner_monthly_energy,
-            use_container_width=True,
+            width="stretch",
             hide_index=True
         )
 
