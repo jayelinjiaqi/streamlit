@@ -31,11 +31,14 @@ LIMIT_OPTIONS = {
 # DATA CLEANING
 # ==================================================
 
-
 def clean_display_dataframe(df):
     """
     Clean DataFrame columns before displaying through Streamlit.
-    Prevents common PyArrow serialization errors.
+
+    - Connector IDs are kept as strings.
+    - Empty strings are converted to missing values.
+    - Datetime columns are normalized.
+    - Mixed object columns are converted to strings.
     """
 
     df = df.copy()
@@ -43,7 +46,10 @@ def clean_display_dataframe(df):
     for col in df.columns:
 
         normalized_col = (
-            str(col).strip().lower().replace("_", " ")
+            str(col)
+            .strip()
+            .lower()
+            .replace("_", " ")
         )
 
         # ------------------------------------------
@@ -86,10 +92,10 @@ def clean_display_dataframe(df):
                 types = non_null.map(type).nunique()
 
                 if types > 1:
+
                     df[col] = df[col].astype("string")
 
     return df
-
 
 
 # ==================================================
@@ -103,6 +109,7 @@ def prepare_summary(
 ):
 
     if df.empty:
+
         return pd.DataFrame(
             columns=[
                 dimension,
@@ -252,8 +259,6 @@ def render_transactions(
         ],
         errors="ignore"
     )
-
-    # Clean mixed data types before Arrow conversion
 
     display = clean_display_dataframe(display)
 
@@ -536,6 +541,10 @@ def render_dimension_dashboard(
                 width="stretch"
             )
 
+            monthly_payment = clean_display_dataframe(
+                monthly_payment
+            )
+
             st.dataframe(
                 monthly_payment,
                 width="stretch",
@@ -630,6 +639,10 @@ def render_dimension_dashboard(
             st.plotly_chart(
                 fig,
                 width="stretch"
+            )
+
+            monthly_energy = clean_display_dataframe(
+                monthly_energy
             )
 
             st.dataframe(
