@@ -1,3 +1,4 @@
+
 import os
 import pandas as pd
 import psycopg
@@ -116,28 +117,36 @@ def prepare_ev_data():
     # ----------------------------------------------
 
     if "ci_power" in df.columns:
+
         df["ci_power"] = pd.to_numeric(
             df["ci_power"],
             errors="coerce"
         )
+
     else:
+
         df["ci_power"] = 0.0
 
     # ----------------------------------------------
-    # CONNECTOR ID CLEANING (Fixes ArrowInvalid Crash)
+    # CONNECTOR ID CLEANING
     # ----------------------------------------------
 
-    if "ci_connector_id" in df.columns:
-        df["ci_connector_id"] = (
-            df["ci_connector_id"]
-            .astype(str)
-            .str.strip()
-            .replace({"": None, "nan": None, "None": None})
-        )
-        df["ci_connector_id"] = pd.to_numeric(
-            df["ci_connector_id"],
-            errors="coerce"
-        ).astype("Int64")
+    connector_columns = [
+        "ci_connector_id",
+        "Connector ID"
+    ]
+
+    for col in connector_columns:
+
+        if col in df.columns:
+
+            df[col] = (
+                pd.to_numeric(
+                    df[col].replace(r"^\s*$", pd.NA, regex=True),
+                    errors="coerce"
+                )
+                .astype("Int64")
+            )
 
     # ----------------------------------------------
     # DATE
@@ -169,6 +178,7 @@ def prepare_ev_data():
     else:
 
         df["report_date"] = pd.NaT
+
         df["month"] = pd.Series(
             pd.NA,
             index=df.index,
@@ -189,6 +199,7 @@ def prepare_ev_data():
     for col in dimension_columns:
 
         if col not in df.columns:
+
             df[col] = "Unknown"
 
         df[col] = (
@@ -219,6 +230,7 @@ def prepare_ev_data():
 def get_filtered_data():
 
     try:
+
         df, date_col = prepare_ev_data()
 
     except Exception as exc:
@@ -353,11 +365,19 @@ def get_filtered_data():
         & df["car_park_operator"].isin(selected_operators)
     ].copy()
 
+    # ----------------------------------------------
+    # APPLY STAKE FILTER
+    # ----------------------------------------------
+
     if selected_stakes is not None:
 
         filtered = filtered[
             filtered["ci_stake"].isin(selected_stakes)
         ]
+
+    # ----------------------------------------------
+    # APPLY DATE FILTER
+    # ----------------------------------------------
 
     if (
         isinstance(date_range, (tuple, list))
