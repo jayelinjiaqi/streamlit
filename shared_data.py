@@ -4,24 +4,35 @@ import os
 import pandas as pd
 import psycopg
 import streamlit as st
+
 from dotenv import load_dotenv
 
 load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-CACHE_TTL = 300
+CACHE_TTL = int(os.getenv("CACHE_TTL", "300"))
+
+CURRENCY_SYMBOL = os.getenv("CURRENCY_SYMBOL", "$")
+
+PAYMENT_DIVISOR = float(
+    os.getenv("PAYMENT_DIVISOR", "1")
+)
 
 REQUIRED_COLUMNS = [
     "car_park_id",
     "payment_amount_100",
 ]
 
-CHART_COLOR = "#00A99D"
+DIMENSION_COLUMNS = [
+    "car_park_name",
+    "car_park_owner",
+    "car_park_operator",
+]
 
 
 # ==================================================
-# DATABASE
+# DATABASE LOADER
 # ==================================================
 
 @st.cache_data(
@@ -31,7 +42,9 @@ CHART_COLOR = "#00A99D"
 def load_ev_data():
 
     if not DATABASE_URL:
-        raise ValueError("DATABASE_URL is missing.")
+        raise ValueError(
+            "DATABASE_URL is missing."
+        )
 
     query = """
         SELECT
@@ -62,17 +75,20 @@ def load_ev_data():
             cur.execute(query)
 
             columns = [
-                desc.name
-                for desc in cur.description
+                item.name
+                for item in cur.description
             ]
 
             rows = cur.fetchall()
 
-    return pd.DataFrame(rows, columns=columns)
+    return pd.DataFrame(
+        rows,
+        columns=columns
+    )
 
 
 # ==================================================
-# DATA PREPARATION
+# PREPARE DATA
 # ==================================================
 
 @st.cache_data(ttl=CACHE_TTL)
@@ -90,35 +106,44 @@ def prepare_ev_data():
 
     if missing:
         raise ValueError(
-            f"Missing required columns: {missing}"
+            f"Missing database columns: {missing}"
         )
 
     # --------------------------------------------------
-    # NUMERIC COLUMNS
+    # PAYMENT
     # --------------------------------------------------
 
-    numeric_columns = [
-        "payment_amount_100",
-        "ci_power",
-    ]
+    df["payment_amount_100"] = pd.to_numeric(
+        df["payment_amount_100"],
+        errors="coerce"
+    )
 
-    for col in numeric_columns:
+    df["payment_amount"] = (
+        df["payment_amount_100"] / PAYMENT_DIVISOR
+    )
 
-        if col in df.columns:
+    # --------------------------------------------------
+    # ENERGY
+    # --------------------------------------------------
 
-            df[col] = pd.to_numeric(
-                df[col],
-                errors="coerce"
-            )
+    if "ci_power" in df.columns:
 
-    # Preserve original amount and create display amount.
-    df["payment_amount"] = df["payment_amount_100"]
+        df["ci_power"] = pd.to_numeric(
+            df["ci_power"],
+            errors="coerce"
+        )
+
+    else:
+
+        df["ci_power"] = float("nan")
 
     # --------------------------------------------------
     # DATE
     # --------------------------------------------------
 
-    date_candidates = ["paid_dt_p8"]
+    date_candidates = [
+        "paid_dt_p8"
+    ]
 
     date_col = next(
         (
@@ -135,6 +160,15 @@ def prepare_ev_data():
             errors="coerce"
         )
 
+        # Ensure consistent date handling.
+        if isinstance(
+            df["report_date"].dtype,
+            pd.DatetimeTZDtype
+        ):
+            df["report_date"] = (
+                df["report_date"].dt.tz_localize(None)
+            )
+
         df["month"] = (
             df["report_date"]
             .dt.to_period("M")
@@ -144,6 +178,7 @@ def prepare_ev_data():
     else:
 
         df["report_date"] = pd.NaT
+
         df["month"] = pd.Series(
             pd.NA,
             index=df.index,
@@ -151,17 +186,10 @@ def prepare_ev_data():
         )
 
     # --------------------------------------------------
-    # DIMENSION COLUMNS
+    # DIMENSIONS
     # --------------------------------------------------
 
-    dimension_columns = [
-        "car_park_id",
-        "car_park_name",
-        "car_park_owner",
-        "car_park_operator",
-    ]
-
-    for col in dimension_columns:
+    for col in DIMENSION_COLUMNS:
 
         if col not in df.columns:
             df[col] = "Unknown"
@@ -171,6 +199,16 @@ def prepare_ev_data():
             .astype("string")
             .fillna("Unknown")
         )
+
+    df["car_park_id"] = (
+        df["car_park_id"]
+        .astype("string")
+        .fillna("Unknown")
+    )
+
+    # --------------------------------------------------
+    # STAKE ID
+    # --------------------------------------------------
 
     if "ci_stake_id" in df.columns:
 
@@ -184,7 +222,7 @@ def prepare_ev_data():
 
 
 # ==================================================
-# REFRESH DATA
+# CACHE REFRESH
 # ==================================================
 
 def refresh_data():
@@ -192,20 +230,44 @@ def refresh_data():
     load_ev_data.clear()
     prepare_ev_data.clear()
 
+    st.cache_data.clear()
+
+    st.session_state.pop(
+        "selected_payment_month",
+        None
+    )
+
+    st.session_state.pop(
+        "selected_carpark",
+        None
+    )
+
+    st.session_state.pop(
+        "selected_payment_operator",
+        None
+    )
+
+    st.session_state.pop(
+        "selected_payment_owner",
+        None
+    )
+
     st.rerun()
 
 
 # ==================================================
-# FILTER OPTIONS
+# FILTER CONTROL
 # ==================================================
 
-def render_multiselect(
+def sidebar_multiselect(
     label,
     options,
     key
 ):
 
-    options = sorted(options)
+    options = sorted(
+        str(value) for value in options
+    )
 
     previous = st.session_state.get(key)
 
@@ -216,7 +278,8 @@ def render_multiselect(
     else:
 
         default = [
-            value for value in previous
+            value
+            for value in previous
             if value in options
         ]
 
@@ -229,7 +292,7 @@ def render_multiselect(
 
 
 # ==================================================
-# GLOBAL SIDEBAR FILTERS
+# GLOBAL FILTERS
 # ==================================================
 
 def get_filtered_data():
@@ -241,7 +304,7 @@ def get_filtered_data():
     except Exception as exc:
 
         st.error(
-            f"Unable to load data: {exc}"
+            f"Unable to load EV data: {exc}"
         )
 
         st.stop()
@@ -249,7 +312,7 @@ def get_filtered_data():
     if df.empty:
 
         st.warning(
-            "The EV transactions table contains no records."
+            "No EV transactions were found."
         )
 
         st.stop()
@@ -260,8 +323,8 @@ def get_filtered_data():
     # CAR PARK
     # --------------------------------------------------
 
-    selected_carparks = render_multiselect(
-        "Car Park Name",
+    selected_carparks = sidebar_multiselect(
+        "Car Park",
         df["car_park_name"].unique(),
         "filter_carparks"
     )
@@ -270,7 +333,7 @@ def get_filtered_data():
     # OWNER
     # --------------------------------------------------
 
-    selected_owners = render_multiselect(
+    selected_owners = sidebar_multiselect(
         "Car Park Owner",
         df["car_park_owner"].unique(),
         "filter_owners"
@@ -280,7 +343,7 @@ def get_filtered_data():
     # OPERATOR
     # --------------------------------------------------
 
-    selected_operators = render_multiselect(
+    selected_operators = sidebar_multiselect(
         "Car Park Operator",
         df["car_park_operator"].unique(),
         "filter_operators"
@@ -290,20 +353,18 @@ def get_filtered_data():
     # STAKE
     # --------------------------------------------------
 
+    selected_stakes = None
+
     if "ci_stake" in df.columns:
 
-        selected_stakes = render_multiselect(
+        selected_stakes = sidebar_multiselect(
             "Stake ID",
             df["ci_stake"].unique(),
             "filter_stakes"
         )
 
-    else:
-
-        selected_stakes = None
-
     # --------------------------------------------------
-    # DATE
+    # DATE RANGE
     # --------------------------------------------------
 
     date_range = None
@@ -323,20 +384,26 @@ def get_filtered_data():
             max_date
         )
 
-        selected_range = st.sidebar.date_input(
+        current_range = st.session_state.get(
+            "filter_date_range"
+        )
+
+        if (
+            not isinstance(current_range, (tuple, list))
+            or len(current_range) != 2
+            or current_range[0] < min_date
+            or current_range[1] > max_date
+        ):
+
+            current_range = default_range
+
+        date_range = st.sidebar.date_input(
             "Transaction Date Range",
-            value=default_range,
+            value=current_range,
             min_value=min_date,
             max_value=max_date,
             key="filter_date_range"
         )
-
-        if (
-            isinstance(selected_range, (tuple, list))
-            and len(selected_range) == 2
-        ):
-
-            date_range = selected_range
 
     # --------------------------------------------------
     # REFRESH
@@ -365,7 +432,10 @@ def get_filtered_data():
             filtered["ci_stake"].isin(selected_stakes)
         ]
 
-    if date_range is not None:
+    if (
+        isinstance(date_range, (tuple, list))
+        and len(date_range) == 2
+    ):
 
         start_date, end_date = date_range
 
