@@ -1,4 +1,4 @@
-from shared_data import get_filtered_data
+from utils.shared_data import get_filtered_data
 import streamlit as st
 import pandas as pd
 import plotly.express as px
