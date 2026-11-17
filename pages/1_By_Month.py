@@ -456,66 +456,213 @@ else:
 
 
 
-# --------------------------------------------------
-# PIVOT TABLE - ENERGY BY CARPARK NAME & STAKE ID & MONTH
-# --------------------------------------------------
-st.subheader("Energy Delivered By Car Park, Stake ID & Month")
 
-if "ci_stake" not in filtered.columns:
-    st.warning("ci_stake column was not found.")
-elif date_col is None:
-    st.warning("No supported date column was found.")
-elif filtered.empty or filtered["report_date"].notna().sum() == 0:
-    st.info("No valid transactions match the selected filters.")
+# ==================================================
+# ENERGY BY CAR PARK, STAKE ID & MONTH
+# ==================================================
+
+st.subheader(
+    "Energy Delivered By Car Park, Stake ID & Month"
+)
+
+required_columns = [
+    "car_park_name",
+    "ci_stake",
+    "ci_connector_id",
+    "ci_power",
+    "report_date"
+]
+
+missing_columns = [
+    col for col in required_columns
+    if col not in filtered.columns
+]
+
+if missing_columns:
+
+    st.warning(
+        f"Missing columns: {', '.join(missing_columns)}"
+    )
+
 else:
-    energy_data = filtered.dropna(subset=["report_date","ci_stake","ci_connector_id"]).copy()
 
-    energy_data["car_park_name"] = (energy_data["car_park_name"].fillna("Unknown"))
+    energy_data = filtered.dropna(
+        subset=["report_date"]
+    ).copy()
 
-    energy_data["ci_connector_id"] = (pd.to_numeric(energy_data["ci_connector_id"], errors="coerce").fillna(0).astype(int))
+    # ----------------------------------------------
+    # CLEAN DATA TYPES
+    # ----------------------------------------------
 
-    energy_data["ci_power"] = pd.to_numeric(energy_data["ci_power"], errors="coerce")
-    energy_data = energy_data.dropna(subset=["ci_power"])
+    energy_data["car_park_name"] = (
+        energy_data["car_park_name"]
+        .fillna("Unknown")
+        .astype("string")
+    )
 
-    # Create pivot table
-    monthly_stake_energy = energy_data.pivot_table(index=["car_park_name", "ci_stake", "ci_connector_id"],
-        columns="month",values="ci_power",aggfunc="sum",fill_value=0,observed=True)
+    energy_data["ci_stake"] = (
+        energy_data["ci_stake"]
+        .fillna("Unknown")
+        .astype("string")
+    )
 
-    # Sort month columns chronologically
-    month_columns = sorted(monthly_stake_energy.columns)
-    monthly_stake_energy = monthly_stake_energy[month_columns]
+    energy_data["ci_connector_id"] = pd.to_numeric(
+        energy_data["ci_connector_id"],
+        errors="coerce"
+    ).astype("Int64")
 
-    # Add Grand Total column
-    monthly_stake_energy["Grand Total"] = (monthly_stake_energy.sum(axis=1))
+    energy_data["ci_power"] = pd.to_numeric(
+        energy_data["ci_power"],
+        errors="coerce"
+    )
 
-    # Remove zero-energy rows
-    monthly_stake_energy = monthly_stake_energy[monthly_stake_energy["Grand Total"] != 0]
+    energy_data = energy_data.dropna(
+        subset=["ci_connector_id", "ci_power"]
+    )
 
-    # Sort by Grand Total descending
-    monthly_stake_energy = monthly_stake_energy.sort_values(by="Grand Total",ascending=False)
+    if energy_data.empty:
 
-    # Calculate overall Grand Total
-    total_row = pd.DataFrame([monthly_stake_energy.sum(axis=0)],
-        index=pd.MultiIndex.from_tuples(
-            [("Grand Total", "", "")],  #3 empty string to match 3 index levels
-            names=["car_park_name", "ci_stake", "ci_connector_id"]))
+        st.info(
+            "No valid energy records are available."
+        )
 
-    # Append one Grand Total row
-    monthly_stake_energy = pd.concat([monthly_stake_energy, total_row])
+    else:
 
-    # Remove column heading
-    monthly_stake_energy.columns.name = None
+        # ------------------------------------------
+        # PIVOT TABLE
+        # ------------------------------------------
 
-    # Reset index to display clean columns
-    monthly_stake_energy = monthly_stake_energy.reset_index()
+        monthly_stake_energy = energy_data.pivot_table(
+            index=[
+                "car_park_name",
+                "ci_stake",
+                "ci_connector_id"
+            ],
+            columns="month",
+            values="ci_power",
+            aggfunc="sum",
+            fill_value=0,
+            observed=True
+        )
 
-    # RENAME COLUMNS
-    monthly_stake_energy = monthly_stake_energy.rename(columns={
-        "car_park_name": "Carpark Name","ci_stake": "Stake ID","ci_connector_id": "Connector ID"})
+        month_columns = sorted(
+            monthly_stake_energy.columns.tolist()
+        )
 
-    # Display table
-    st.dataframe(monthly_stake_energy.style.format({col: "{:,.0f} kWh" for col in month_columns + ["Grand Total"]}),
-        use_container_width=True,hide_index=True)
+        monthly_stake_energy = (
+            monthly_stake_energy[month_columns]
+        )
+
+        # ------------------------------------------
+        # GRAND TOTAL
+        # ------------------------------------------
+
+        monthly_stake_energy["Grand Total"] = (
+            monthly_stake_energy[month_columns].sum(axis=1)
+        )
+
+        monthly_stake_energy = (
+            monthly_stake_energy[
+                monthly_stake_energy["Grand Total"] != 0
+            ]
+            .sort_values(
+                "Grand Total",
+                ascending=False
+            )
+        )
+
+        if not monthly_stake_energy.empty:
+
+            total_values = (
+                monthly_stake_energy[
+                    month_columns + ["Grand Total"]
+                ].sum()
+            )
+
+            total_row = pd.DataFrame(
+                [total_values],
+                index=pd.MultiIndex.from_tuples(
+                    [("Grand Total", " ", pd.NA)],
+                    names=[
+                        "car_park_name",
+                        "ci_stake",
+                        "ci_connector_id"
+                    ]
+                )
+            )
+
+            monthly_stake_energy = pd.concat(
+                [
+                    monthly_stake_energy,
+                    total_row
+                ]
+            )
+
+            monthly_stake_energy.columns.name = None
+
+            monthly_stake_energy = (
+                monthly_stake_energy.reset_index()
+            )
+
+            monthly_stake_energy = (
+                monthly_stake_energy.rename(
+                    columns={
+                        "car_park_name": "Carpark Name",
+                        "ci_stake": "Stake ID",
+                        "ci_connector_id": "Connector ID"
+                    }
+                )
+            )
+
+            # --------------------------------------
+            # ENSURE ARROW-COMPATIBLE TYPES
+            # --------------------------------------
+
+            monthly_stake_energy["Carpark Name"] = (
+                monthly_stake_energy["Carpark Name"]
+                .astype("string")
+            )
+
+            monthly_stake_energy["Stake ID"] = (
+                monthly_stake_energy["Stake ID"]
+                .astype("string")
+            )
+
+            monthly_stake_energy["Connector ID"] = (
+                pd.to_numeric(
+                    monthly_stake_energy["Connector ID"],
+                    errors="coerce"
+                ).astype("Int64")
+            )
+
+            for col in month_columns + ["Grand Total"]:
+
+                monthly_stake_energy[col] = pd.to_numeric(
+                    monthly_stake_energy[col],
+                    errors="coerce"
+                ).fillna(0).astype("float64")
+
+            # --------------------------------------
+            # DISPLAY
+            # --------------------------------------
+
+            st.dataframe(
+                monthly_stake_energy.style.format(
+                    {
+                        col: "{:,.2f} kWh"
+                        for col in month_columns + ["Grand Total"]
+                    }
+                ),
+                width="stretch",
+                hide_index=True
+            )
+
+        else:
+
+            st.info(
+                "No energy records were found for the selected filters."
+            )
+
 
 # --------------------------------------------------
 # TRANSACTION DATA TABLE
