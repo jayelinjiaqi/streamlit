@@ -1,26 +1,26 @@
 
 import plotly.express as px
 
-
 CHART_COLOR = "#00A99D"
+NAVY = "#123047"
 
 
-def get_chart_height(number_of_rows):
+def get_chart_height(rows):
 
     return max(
-        450,
-        min(number_of_rows * 35 + 100, 1600)
+        420,
+        min(rows * 36 + 100, 1600)
     )
 
 
-def create_horizontal_chart(
+def create_ranking_chart(
     df,
-    category_column,
-    value_column,
-    transaction_column,
+    category,
+    value,
+    transaction_count,
     title,
-    value_label,
     unit="currency",
+    chart_key=None
 ):
 
     if df.empty:
@@ -28,16 +28,12 @@ def create_horizontal_chart(
 
     fig = px.bar(
         df,
-        x=value_column,
-        y=category_column,
+        x=value,
+        y=category,
         orientation="h",
-        custom_data=[transaction_column],
+        custom_data=[transaction_count],
         template="plotly_white",
-        color_discrete_sequence=[CHART_COLOR],
-        labels={
-            category_column: title,
-            value_column: value_label
-        }
+        color_discrete_sequence=[CHART_COLOR]
     )
 
     if unit == "currency":
@@ -69,26 +65,35 @@ def create_horizontal_chart(
             + "<br>"
             "Transactions: %{customdata[0]:,}"
             "<extra></extra>"
-        )
+        ),
+        marker_line_width=0
     )
 
     fig.update_layout(
         height=get_chart_height(len(df)),
         margin=dict(
-            t=30,
-            b=40,
+            t=25,
+            b=45,
             l=20,
-            r=50
+            r=60
         ),
-        xaxis_title=value_label,
-        yaxis_title=title,
+        xaxis_title=title,
+        yaxis_title="",
         yaxis=dict(
             categoryorder="total ascending",
             automargin=True
         ),
         showlegend=False,
-        bargap=0.25,
-        font=dict(size=12)
+        bargap=0.3,
+        font=dict(
+            family="Arial",
+            size=12,
+            color=NAVY
+        ),
+        plot_bgcolor="white",
+        paper_bgcolor="white",
+        clickmode="event+select",
+        dragmode=False
     )
 
     return fig
@@ -96,7 +101,7 @@ def create_horizontal_chart(
 
 def create_monthly_chart(
     df,
-    value_column,
+    value,
     title,
     unit="currency"
 ):
@@ -107,23 +112,32 @@ def create_monthly_chart(
     fig = px.bar(
         df,
         x="month",
-        y=value_column,
+        y=value,
+        text=value,
         template="plotly_white",
         color_discrete_sequence=[CHART_COLOR]
     )
 
     if unit == "currency":
 
-        text_template = "$%{y:,.2f}"
+        text_template = "$%{text:,.2f}"
+
+        hover_value = (
+            "Payment: $%{y:,.2f}"
+        )
 
         fig.update_yaxes(
             tickprefix="$",
-            tickformat=",.2f"
+            tickformat=",.0f"
         )
 
     else:
 
-        text_template = "%{y:,.2f} kWh"
+        text_template = "%{text:,.2f} kWh"
+
+        hover_value = (
+            "Energy: %{y:,.2f} kWh"
+        )
 
         fig.update_yaxes(
             ticksuffix=" kWh",
@@ -133,20 +147,27 @@ def create_monthly_chart(
     fig.update_traces(
         texttemplate=text_template,
         textposition="outside",
-        cliponaxis=False
+        cliponaxis=False,
+        hovertemplate=(
+            "Month: %{x}<br>"
+            + hover_value
+            + "<extra></extra>"
+        )
     )
 
     fig.update_layout(
-        height=450,
+        height=440,
         title=title,
-        showlegend=False,
-        xaxis_title="Month",
         margin=dict(
-            t=40,
-            b=30,
+            t=45,
+            b=35,
             l=20,
             r=20
-        )
+        ),
+        xaxis_title="Month",
+        showlegend=False,
+        plot_bgcolor="white",
+        paper_bgcolor="white"
     )
 
     return fig
