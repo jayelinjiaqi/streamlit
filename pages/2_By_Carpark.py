@@ -1,14 +1,25 @@
-import sys
-import os
-
-# Adds the root project folder to Python's search path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import streamlit as st
-from shared_data import get_filtered_data
+import shared_data
+
+st.write("Loaded shared_data from:")
+st.code(shared_data.__file__)
+
+st.write("Has get_filtered_data:")
+st.write(hasattr(shared_data, "get_filtered_data"))
+
+st.write("Available filter functions:")
+st.write([
+    name for name in dir(shared_data)
+    if "filter" in name.lower()
+])
+
+if not hasattr(shared_data, "get_filtered_data"):
+    st.error("get_filtered_data() is missing from the loaded module.")
+    st.stop()
+
 from utils.dashboard import render_dimension_dashboard
 
-
-filtered, date_col = get_filtered_data()
+filtered, date_col = shared_data.get_filtered_data()
 
 render_dimension_dashboard(
     filtered=filtered,
