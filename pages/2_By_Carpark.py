@@ -1,7 +1,6 @@
 
 import streamlit as st
-
-from shared_data import get_filtered_data
+from utils.shared_data import get_filtered_data
 from utils.dashboard import render_dimension_dashboard
 
 
