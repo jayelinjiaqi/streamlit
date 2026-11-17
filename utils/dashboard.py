@@ -31,6 +31,7 @@ LIMIT_OPTIONS = {
 # DATA CLEANING
 # ==================================================
 
+
 def clean_display_dataframe(df):
     """
     Clean DataFrame columns before displaying through Streamlit.
@@ -41,20 +42,25 @@ def clean_display_dataframe(df):
 
     for col in df.columns:
 
+        normalized_col = (
+            str(col).strip().lower().replace("_", " ")
+        )
+
         # ------------------------------------------
         # CONNECTOR ID
         # ------------------------------------------
 
-        if col in ["Connector ID", "ci_connector_id"]:
+        if normalized_col in [
+            "connector id",
+            "ci connector id"
+        ]:
 
-            df[col] = pd.to_numeric(
-                df[col].replace(
-                    r"^\s*$",
-                    pd.NA,
-                    regex=True
-                ),
-                errors="coerce"
-            ).astype("Int64")
+            df[col] = (
+                df[col]
+                .astype("string")
+                .str.strip()
+                .replace("", pd.NA)
+            )
 
         # ------------------------------------------
         # DATETIME
@@ -73,9 +79,6 @@ def clean_display_dataframe(df):
 
         elif df[col].dtype == "object":
 
-            # Convert mixed object columns to strings
-            # to prevent Arrow type conversion errors.
-
             non_null = df[col].dropna()
 
             if not non_null.empty:
@@ -83,10 +86,10 @@ def clean_display_dataframe(df):
                 types = non_null.map(type).nunique()
 
                 if types > 1:
-
                     df[col] = df[col].astype("string")
 
     return df
+
 
 
 # ==================================================
