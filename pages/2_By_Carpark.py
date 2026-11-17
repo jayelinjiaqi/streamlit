@@ -1,14 +1,12 @@
 import streamlit as st
-import shared_data
+from shared_data import get_filtered_data
+from utils.dashboard import render_dimension_dashboard
 
-st.write("Module location:", shared_data.__file__)
+filtered, date_col = get_filtered_data()
 
-st.write(
-    "Function exists:",
-    hasattr(shared_data, "get_filtered_data")
-)
-
-st.write(
-    "Available functions:",
-    [x for x in dir(shared_data) if not x.startswith("_")]
+render_dimension_dashboard(
+    filtered=filtered,
+    dimension="car_park_name",
+    title="By Carpark",
+    date_col=date_col
 )
