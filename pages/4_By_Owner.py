@@ -1,4 +1,8 @@
+import sys
+import os
 
+# Adds the root project folder to Python's search path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from shared_data import get_filtered_data
 import streamlit as st
 import pandas as pd
