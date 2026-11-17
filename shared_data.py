@@ -1,4 +1,3 @@
-
 import os
 import pandas as pd
 import psycopg
@@ -123,6 +122,22 @@ def prepare_ev_data():
         )
     else:
         df["ci_power"] = 0.0
+
+    # ----------------------------------------------
+    # CONNECTOR ID CLEANING (Fixes ArrowInvalid Crash)
+    # ----------------------------------------------
+
+    if "ci_connector_id" in df.columns:
+        df["ci_connector_id"] = (
+            df["ci_connector_id"]
+            .astype(str)
+            .str.strip()
+            .replace({"": None, "nan": None, "None": None})
+        )
+        df["ci_connector_id"] = pd.to_numeric(
+            df["ci_connector_id"],
+            errors="coerce"
+        ).astype("Int64")
 
     # ----------------------------------------------
     # DATE
@@ -320,7 +335,7 @@ def get_filtered_data():
 
     if st.sidebar.button(
         "Refresh Data",
-        use_container_width=True
+        width="stretch"
     ):
 
         load_ev_data.clear()
