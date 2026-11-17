@@ -4,6 +4,27 @@ import pandas as pd
 import psycopg
 import streamlit as st
 
+def make_dataframe_arrow_compatible(df):
+    df = df.copy()
+
+    for col in df.columns:
+        normalized_name = (
+            str(col).strip().lower().replace("_", " ")
+        )
+
+        if normalized_name in (
+            "connector id",
+            "ci connector id"
+        ):
+            df[col] = (
+                df[col]
+                .astype("string")
+                .str.strip()
+                .replace("", pd.NA)
+            )
+
+    return df
+
 
 # =========================================================
 # CONFIGURATION
