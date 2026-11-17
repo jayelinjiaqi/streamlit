@@ -28,6 +28,68 @@ LIMIT_OPTIONS = {
 
 
 # ==================================================
+# DATA CLEANING
+# ==================================================
+
+def clean_display_dataframe(df):
+    """
+    Clean DataFrame columns before displaying through Streamlit.
+    Prevents common PyArrow serialization errors.
+    """
+
+    df = df.copy()
+
+    for col in df.columns:
+
+        # ------------------------------------------
+        # CONNECTOR ID
+        # ------------------------------------------
+
+        if col in ["Connector ID", "ci_connector_id"]:
+
+            df[col] = pd.to_numeric(
+                df[col].replace(
+                    r"^\s*$",
+                    pd.NA,
+                    regex=True
+                ),
+                errors="coerce"
+            ).astype("Int64")
+
+        # ------------------------------------------
+        # DATETIME
+        # ------------------------------------------
+
+        elif pd.api.types.is_datetime64_any_dtype(df[col]):
+
+            df[col] = pd.to_datetime(
+                df[col],
+                errors="coerce"
+            )
+
+        # ------------------------------------------
+        # OBJECT COLUMNS
+        # ------------------------------------------
+
+        elif df[col].dtype == "object":
+
+            # Convert mixed object columns to strings
+            # to prevent Arrow type conversion errors.
+
+            non_null = df[col].dropna()
+
+            if not non_null.empty:
+
+                types = non_null.map(type).nunique()
+
+                if types > 1:
+
+                    df[col] = df[col].astype("string")
+
+    return df
+
+
+# ==================================================
 # AGGREGATION
 # ==================================================
 
@@ -37,16 +99,37 @@ def prepare_summary(
     value_column
 ):
 
+    if df.empty:
+        return pd.DataFrame(
+            columns=[
+                dimension,
+                "total_amount",
+                "transactions",
+                "valid_values"
+            ]
+        )
+
+    if dimension not in df.columns:
+        return pd.DataFrame()
+
+    if value_column not in df.columns:
+        return pd.DataFrame()
+
     valid = df.dropna(
         subset=["report_date"]
     ).copy()
+
+    valid[value_column] = pd.to_numeric(
+        valid[value_column],
+        errors="coerce"
+    )
 
     result = (
         valid
         .groupby(dimension, as_index=False)
         .agg(
             total_amount=(value_column, "sum"),
-            transactions=("payment_amount", "size"),
+            transactions=(value_column, "size"),
             valid_values=(value_column, "count")
         )
         .sort_values(
@@ -67,12 +150,18 @@ def update_selection(
     state_key
 ):
 
+    if event is None:
+        return
+
     selected_points = event.selection.points
 
     if not selected_points:
         return
 
-    clicked = selected_points[0]["y"]
+    clicked = selected_points[0].get("y")
+
+    if clicked is None:
+        return
 
     current = st.session_state.get(state_key)
 
@@ -98,12 +187,20 @@ def render_transactions(
 
     details = df.copy()
 
+    # ----------------------------------------------
+    # ENTITY FILTER
+    # ----------------------------------------------
+
     if selected_entity is not None:
 
         details = details[
             details[dimension].astype(str)
             == str(selected_entity)
         ]
+
+    # ----------------------------------------------
+    # MONTH FILTER
+    # ----------------------------------------------
 
     if selected_month is not None:
 
@@ -112,10 +209,16 @@ def render_transactions(
             == str(selected_month)
         ]
 
-    details = details.sort_values(
-        "report_date",
-        ascending=False
-    )
+    # ----------------------------------------------
+    # SORT
+    # ----------------------------------------------
+
+    if "report_date" in details.columns:
+
+        details = details.sort_values(
+            "report_date",
+            ascending=False
+        )
 
     st.divider()
 
@@ -133,9 +236,9 @@ def render_transactions(
 
         return
 
-    # --------------------------------------------------
+    # ----------------------------------------------
     # TRANSACTION TABLE
-    # --------------------------------------------------
+    # ----------------------------------------------
 
     display = details.copy()
 
@@ -147,16 +250,20 @@ def render_transactions(
         errors="ignore"
     )
 
+    # Clean mixed data types before Arrow conversion
+
+    display = clean_display_dataframe(display)
+
     st.dataframe(
         display,
-        use_container_width=True,
+        width="stretch",
         hide_index=True,
         height=450
     )
 
-    # --------------------------------------------------
+    # ----------------------------------------------
     # EXPORT
-    # --------------------------------------------------
+    # ----------------------------------------------
 
     st.markdown("#### Export Transactions")
 
@@ -177,16 +284,50 @@ def render_dimension_dashboard(
     page_title
 ):
 
+    # ----------------------------------------------
+    # PAGE HEADER
+    # ----------------------------------------------
+
     st.title(page_title)
 
     st.caption(
         "EV billing and energy performance analytics"
     )
 
+    # ----------------------------------------------
+    # EMPTY DATA CHECK
+    # ----------------------------------------------
+
     if filtered.empty:
 
         st.warning(
             "No transactions match the selected filters."
+        )
+
+        return
+
+    # ----------------------------------------------
+    # REQUIRED COLUMNS
+    # ----------------------------------------------
+
+    required_columns = [
+        "report_date",
+        "payment_amount",
+        "ci_power",
+        "month",
+        dimension
+    ]
+
+    missing = [
+        col for col in required_columns
+        if col not in filtered.columns
+    ]
+
+    if missing:
+
+        st.error(
+            "Missing required columns: "
+            + ", ".join(missing)
         )
 
         return
@@ -199,29 +340,31 @@ def render_dimension_dashboard(
 
         return
 
-    if dimension not in filtered.columns:
-
-        st.error(
-            f"Missing dimension column: {dimension}"
-        )
-
-        return
-
     filtered = filtered.copy()
 
-    # --------------------------------------------------
+    # ----------------------------------------------
     # CLEAN DATA
-    # --------------------------------------------------
+    # ----------------------------------------------
 
     filtered[dimension] = (
         filtered[dimension]
+        .astype("string")
         .fillna("Unknown")
-        .astype(str)
     )
 
-    # --------------------------------------------------
+    filtered["payment_amount"] = pd.to_numeric(
+        filtered["payment_amount"],
+        errors="coerce"
+    )
+
+    filtered["ci_power"] = pd.to_numeric(
+        filtered["ci_power"],
+        errors="coerce"
+    )
+
+    # ----------------------------------------------
     # FILTERS
-    # --------------------------------------------------
+    # ----------------------------------------------
 
     st.subheader(
         f"{dimension_label} Filters"
@@ -252,9 +395,9 @@ def render_dimension_dashboard(
 
     limit = LIMIT_OPTIONS[limit_choice]
 
-    # --------------------------------------------------
+    # ----------------------------------------------
     # PREPARE DATA
-    # --------------------------------------------------
+    # ----------------------------------------------
 
     valid_data = filtered.dropna(
         subset=["report_date"]
@@ -272,11 +415,14 @@ def render_dimension_dashboard(
         "ci_power"
     )
 
-    # --------------------------------------------------
+    # ----------------------------------------------
     # APPLY DISPLAY FILTER
-    # --------------------------------------------------
+    # ----------------------------------------------
 
     def apply_display_filter(summary):
+
+        if summary.empty:
+            return summary
 
         if selected_search != "All":
 
@@ -303,9 +449,9 @@ def render_dimension_dashboard(
         f"{len(payment_summary):,} {dimension_label.lower()}s."
     )
 
-    # --------------------------------------------------
+    # ==================================================
     # PAYMENT CHART
-    # --------------------------------------------------
+    # ==================================================
 
     st.divider()
 
@@ -330,7 +476,7 @@ def render_dimension_dashboard(
 
         event_payment = st.plotly_chart(
             fig_payment,
-            use_container_width=True,
+            width="stretch",
             key=f"{dimension}_payment_chart",
             on_select="rerun",
             selection_mode="points"
@@ -341,9 +487,9 @@ def render_dimension_dashboard(
             f"selected_payment_{dimension}"
         )
 
-    # --------------------------------------------------
+    # ==================================================
     # PAYMENT MONTHLY BREAKDOWN
-    # --------------------------------------------------
+    # ==================================================
 
     selected_payment = st.session_state.get(
         f"selected_payment_{dimension}"
@@ -384,12 +530,12 @@ def render_dimension_dashboard(
 
             st.plotly_chart(
                 fig,
-                use_container_width=True
+                width="stretch"
             )
 
             st.dataframe(
                 monthly_payment,
-                use_container_width=True,
+                width="stretch",
                 hide_index=True
             )
 
@@ -399,9 +545,9 @@ def render_dimension_dashboard(
             payment_entity
         )
 
-    # --------------------------------------------------
+    # ==================================================
     # ENERGY CHART
-    # --------------------------------------------------
+    # ==================================================
 
     st.divider()
 
@@ -426,7 +572,7 @@ def render_dimension_dashboard(
 
         event_energy = st.plotly_chart(
             fig_energy,
-            use_container_width=True,
+            width="stretch",
             key=f"{dimension}_energy_chart",
             on_select="rerun",
             selection_mode="points"
@@ -437,9 +583,9 @@ def render_dimension_dashboard(
             f"selected_energy_{dimension}"
         )
 
-    # --------------------------------------------------
+    # ==================================================
     # ENERGY MONTHLY BREAKDOWN
-    # --------------------------------------------------
+    # ==================================================
 
     selected_energy = st.session_state.get(
         f"selected_energy_{dimension}"
@@ -480,12 +626,12 @@ def render_dimension_dashboard(
 
             st.plotly_chart(
                 fig,
-                use_container_width=True
+                width="stretch"
             )
 
             st.dataframe(
                 monthly_energy,
-                use_container_width=True,
+                width="stretch",
                 hide_index=True
             )
 
@@ -495,9 +641,9 @@ def render_dimension_dashboard(
             energy_entity
         )
 
-    # --------------------------------------------------
+    # ==================================================
     # SUMMARY EXPORT
-    # --------------------------------------------------
+    # ==================================================
 
     st.divider()
 
@@ -523,11 +669,25 @@ def render_dimension_dashboard(
         }
     )
 
+    combined = combined.fillna({
+        "total_payment": 0,
+        "energy_delivered": 0
+    })
+
+    export_data = filtered.drop(
+        columns=[
+            "report_date",
+            "month"
+        ],
+        errors="ignore"
+    )
+
+    export_data = clean_display_dataframe(
+        export_data
+    )
+
     render_export_buttons(
-        df=filtered.drop(
-            columns=["report_date", "month"],
-            errors="ignore"
-        ),
+        df=export_data,
         filename=f"goparkin_{dimension}_report",
         summary=combined
     )
