@@ -77,7 +77,7 @@ def load_ev_data():
             LEFT JOIN public.car_park c on e.car_park_id = c.id
             LEFT JOIN public.car_park_owner cpo on c.car_park_owner_id = cpo.id
             LEFT JOIN public.car_park_operator op on c.car_park_operator_id = op.id
-            LIMIT 1000
+            LIMIT 200
             """)
             columns = [desc.name for desc in cur.description]
             rows = cur.fetchall()
